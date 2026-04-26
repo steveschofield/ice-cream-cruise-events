@@ -39,6 +39,8 @@ export default function ModalScreen() {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationSubscription, setLocationSubscription] = useState(null);
   const [event, setEvent] = useState(null);
+  const [completedWaypoints, setCompletedWaypoints] = useState(new Set());
+  const [nextWaypointIndex, setNextWaypointIndex] = useState(0);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -98,10 +100,35 @@ export default function ModalScreen() {
         };
         setCurrentLocation(newCoord);
 
+        if (event && event.waypoints.length > 0) {
+          const completed = new Set();
+          let nextIdx = 0;
+          let closestDist = Infinity;
+
+          event.waypoints.forEach((wp, idx) => {
+            const dist = Math.sqrt(
+              Math.pow(wp.lat - newCoord.latitude, 2) +
+              Math.pow(wp.lng - newCoord.longitude, 2)
+            );
+
+            if (dist < 0.003) {
+              completed.add(wp.id);
+            }
+
+            if (dist < closestDist) {
+              closestDist = dist;
+              nextIdx = idx;
+            }
+          });
+
+          setCompletedWaypoints(completed);
+          setNextWaypointIndex(nextIdx);
+        }
+
         mapRef.current?.animateToRegion({
           ...newCoord,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
         });
       }
     );
@@ -139,7 +166,7 @@ export default function ModalScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.detailsContainer} scrollEnabled={false}>
-        <Text style={styles.title}>{event.name}</Text>
+        <Text style={styles.modalTitle}>{event.name}</Text>
         <Text style={styles.dateTime}>{event.date}</Text>
         <Text style={styles.timeInfo}>🕖 Event Start: {event.eventTime}</Text>
         <Text style={styles.timeInfo}>🚗 Cruise Start: {event.cruiseStartTime}</Text>
@@ -157,10 +184,20 @@ export default function ModalScreen() {
           longitudeDelta: 0.05,
         }}
       >
-        {event.waypoints.map((waypoint) => {
+        {event.waypoints.map((waypoint, idx) => {
           const isStart = waypoint.order === 1;
           const isEnd = waypoint.order === event.waypoints.length;
-          const color = isStart ? '#34C759' : isEnd ? '#FF3B30' : '#007AFF';
+          const isCompleted = completedWaypoints.has(waypoint.id);
+          const isNext = idx === nextWaypointIndex && !isCompleted;
+
+          let color = '#FF3B30';
+          if (isCompleted) {
+            color = '#CCCCCC';
+          } else if (isNext) {
+            color = '#FFD700';
+          } else if (!isStart && !isEnd) {
+            color = '#007AFF';
+          }
 
           return (
             <Marker
@@ -170,7 +207,11 @@ export default function ModalScreen() {
                 longitude: waypoint.lng,
               }}
               pinColor={color}
+              opacity={isCompleted ? 0.4 : 1}
             >
+              <View style={[styles.numberOverlay, { borderColor: color }]}>
+                <Text style={styles.overlayNumber}>{waypoint.order}</Text>
+              </View>
               <Callout>
                 <View style={styles.calloutContainer}>
                   <View style={[styles.numberBadge, { backgroundColor: color }]}>
@@ -230,6 +271,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  numberOverlay: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'white',
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  overlayNumber: {
+    fontWeight: 'bold',
+    fontSize: 13,
+    color: '#333',
   },
   dateTime: {
     fontSize: 14,

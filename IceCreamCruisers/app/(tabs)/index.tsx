@@ -47,7 +47,8 @@ export default function HomeScreen() {
       {events.map((event) => (
         <View key={event.id} style={styles.eventCard}>
           <Text style={styles.eventName}>{event.name}</Text>
-          <Text style={styles.eventDate}>{event.date} • {event.time}</Text>
+          <Text style={styles.eventDate}>{event.date}</Text>
+          <Text style={styles.eventTimes}>🕖 Event: {event.eventTime} • 🚗 Cruise: {event.cruiseStartTime}</Text>
           <Text style={styles.eventMeetingPoint}>📍 {event.meetingPoint}</Text>
           <Text style={styles.eventDescription}>{event.description}</Text>
           
@@ -100,7 +101,12 @@ const styles = StyleSheet.create({
   eventDate: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  eventTimes: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 8,
   },
   eventMeetingPoint: {
     fontSize: 14,
