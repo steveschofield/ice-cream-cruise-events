@@ -126,6 +126,19 @@ else
 fi
 echo ""
 
+# 6. Check/Install Fastlane (required for iOS builds)
+echo -e "${BLUE}6️⃣  Checking Fastlane...${NC}"
+if ! command -v fastlane &> /dev/null; then
+  echo -e "${YELLOW}Installing Fastlane...${NC}"
+  sudo gem install fastlane -NV
+  installed=$((installed + 1))
+else
+  FASTLANE_VERSION=$(fastlane --version)
+  echo "Found: $FASTLANE_VERSION"
+fi
+echo -e "${GREEN}✓ Fastlane ready${NC}"
+echo ""
+
 # 6. Check Node and npm
 echo -e "${BLUE}6️⃣  Checking Node.js and npm...${NC}"
 NODE_VERSION=$(node --version)
@@ -168,6 +181,14 @@ if command -v xcode-select &> /dev/null; then
   echo -e "${GREEN}✓ Xcode Command Line Tools${NC}"
 else
   echo -e "${YELLOW}⚠️  Xcode Command Line Tools${NC}"
+fi
+
+# Verify Fastlane
+if command -v fastlane &> /dev/null; then
+  echo -e "${GREEN}✓ Fastlane${NC}"
+else
+  echo -e "${RED}✗ Fastlane${NC}"
+  failed=1
 fi
 
 echo ""

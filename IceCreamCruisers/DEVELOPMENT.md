@@ -152,6 +152,16 @@ xcode-select --install
 xcode-select --version
 ```
 
+### Fastlane (for iOS builds)
+
+```bash
+# Install via Ruby gems
+sudo gem install fastlane -NV
+
+# Verify
+fastlane --version
+```
+
 ## Troubleshooting
 
 ### "ANDROID_HOME not set" error
