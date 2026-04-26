@@ -29,6 +29,15 @@ if [ $? -ne 0 ]; then
 fi
 echo ""
 
+# Step 1b: Additional validation checks
+echo -e "${BLUE}Step 1b: Running security and configuration validation...${NC}"
+bash scripts/validate-submission.sh
+if [ $? -ne 0 ]; then
+  echo -e "${RED}✗ Validation checks failed. Please fix issues above before continuing.${NC}"
+  exit 1
+fi
+echo ""
+
 # Step 2: Verify environment variables
 echo -e "${BLUE}Step 2: Checking environment variables...${NC}"
 if [ -z "$ADMIN_USERNAME" ] || [ -z "$ADMIN_PASSWORD" ]; then
