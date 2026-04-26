@@ -256,7 +256,7 @@ export default function ModalScreen() {
           } else if (isStart || isEnd) {
             color = '#FF3B30';  // Always red for start and end
           } else if (isNext) {
-            color = '#FFD700';  // Gold for next (middle waypoints only)
+            color = '#FF6600';  // Bright orange for next (middle waypoints only)
           } else {
             color = '#007AFF';  // Blue for other middle waypoints
           }
