@@ -1,9 +1,10 @@
 import { useLocalSearchParams, Link } from 'expo-router';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Vibration } from 'react-native';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { Audio } from 'expo-av';
 import { API_URL } from '../config';
 
 function toCoordinateValue(value) {
@@ -37,12 +38,16 @@ export default function ModalScreen() {
   const mapRef = useRef(null);
 
   const [cruiseStarted, setCruiseStarted] = useState(false);
+  const [cruisePaused, setCruisePaused] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationSubscription, setLocationSubscription] = useState(null);
   const [event, setEvent] = useState(null);
   const [completedWaypoints, setCompletedWaypoints] = useState(new Set());
   const [nextWaypointIndex, setNextWaypointIndex] = useState(0);
   const [distanceToNext, setDistanceToNext] = useState(null);
+  const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [alertedWaypoints, setAlertedWaypoints] = useState(new Set());
+  const lastLocationRef = useRef(null);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -95,13 +100,21 @@ export default function ModalScreen() {
         timeInterval: 1000,
         distanceInterval: 10,
       },
-      (location) => {
-        console.log('Location update:', location.coords.latitude, location.coords.longitude);
+      async (location) => {
         const newCoord = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         };
         setCurrentLocation(newCoord);
+
+        if (lastLocationRef.current) {
+          const deltaLat = newCoord.latitude - lastLocationRef.current.latitude;
+          const deltaLng = newCoord.longitude - lastLocationRef.current.longitude;
+          const distMeters = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng) * 111000;
+          const speedKmh = (distMeters / 1000) / (location.timestamp - lastLocationRef.current.timestamp) * 1000 * 3.6;
+          setCurrentSpeed(Math.max(0, Math.round(speedKmh)));
+        }
+        lastLocationRef.current = { ...newCoord, timestamp: location.timestamp };
 
         if (event && event.waypoints.length > 0) {
           const completed = new Set();
@@ -135,17 +148,39 @@ export default function ModalScreen() {
             ) * 111
           ).toFixed(1);
           setDistanceToNext(kmToNext);
+
+          if (kmToNext < 1 && !alertedWaypoints.has(nextWp.id)) {
+            try {
+              await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+              const { sound } = await Audio.Sound.createAsync(require('../assets/notification.mp3').default || { uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' });
+              await sound.playAsync();
+            } catch (e) {
+              console.log('Audio play failed, trying vibration only');
+            }
+            Vibration.vibrate([0, 500, 100, 500]);
+            setAlertedWaypoints(new Set([...alertedWaypoints, nextWp.id]));
+          }
         }
 
-        mapRef.current?.animateToRegion({
-          ...newCoord,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        });
+        if (!cruisePaused) {
+          mapRef.current?.animateToRegion({
+            ...newCoord,
+            latitudeDelta: 0.04,
+            longitudeDelta: 0.04,
+          });
+        }
       }
     );
 
     setLocationSubscription(subscription);
+  };
+
+  const pauseCruise = () => {
+    setCruisePaused(true);
+  };
+
+  const resumeCruise = () => {
+    setCruisePaused(false);
   };
 
   const stopCruise = async () => {
@@ -155,8 +190,12 @@ export default function ModalScreen() {
     }
     await deactivateKeepAwake();
     setCruiseStarted(false);
+    setCruisePaused(false);
     setCurrentLocation(null);
     setDistanceToNext(null);
+    setCurrentSpeed(0);
+    setAlertedWaypoints(new Set());
+    lastLocationRef.current = null;
   };
 
   if (!event) {
@@ -180,13 +219,19 @@ export default function ModalScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.titleBar}>
-        <View>
+        <View style={styles.titleContent}>
           <Text style={styles.modalTitle}>{event.name}</Text>
-          {cruiseStarted && distanceToNext && (
-            <Text style={styles.distanceText}>📍 {distanceToNext} km to next stop</Text>
+          {cruiseStarted && nextWaypointIndex < event.waypoints.length && (
+            <Text style={styles.nextWaypointText}>{event.waypoints[nextWaypointIndex].name}</Text>
+          )}
+          {cruiseStarted && (
+            <View style={styles.statsRow}>
+              <Text style={styles.statText}>⚡ {currentSpeed} km/h</Text>
+              <Text style={styles.statText}>📍 {distanceToNext} km</Text>
+            </View>
           )}
         </View>
-        {cruiseStarted && <Text style={styles.statusText}>🔴 Live</Text>}
+        {cruiseStarted && <Text style={styles.statusText}>{cruisePaused ? '⏸️ Paused' : '🔴 Live'}</Text>}
       </View>
 
       <MapView
@@ -259,9 +304,20 @@ export default function ModalScreen() {
               <Text style={styles.buttonText}>Start Cruise</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopCruise}>
-              <Text style={styles.buttonText}>Stop Cruise</Text>
-            </TouchableOpacity>
+            <>
+              {!cruisePaused ? (
+                <TouchableOpacity style={[styles.button, styles.pauseButton]} onPress={pauseCruise}>
+                  <Text style={styles.buttonText}>Pause</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={[styles.button, styles.resumeButton]} onPress={resumeCruise}>
+                  <Text style={styles.buttonText}>Resume</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopCruise}>
+                <Text style={styles.buttonText}>Stop</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
         <Link href="/" dismissTo asChild>
@@ -287,7 +343,26 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  titleContent: {
+    flex: 1,
+  },
+  nextWaypointText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
+    marginTop: 4,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginTop: 6,
+    gap: 12,
+  },
+  statText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '500',
   },
   detailsContainer: {
     paddingHorizontal: 16,
@@ -358,13 +433,22 @@ const styles = StyleSheet.create({
     borderTopColor: '#e0e0e0',
   },
   buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginBottom: 8,
   },
   button: {
+    flex: 1,
     backgroundColor: '#007AFF',
     padding: 12,
     borderRadius: 6,
     alignItems: 'center',
+  },
+  pauseButton: {
+    backgroundColor: '#FF9500',
+  },
+  resumeButton: {
+    backgroundColor: '#34C759',
   },
   stopButton: {
     backgroundColor: '#FF3B30',
