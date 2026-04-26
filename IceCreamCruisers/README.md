@@ -35,6 +35,69 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## Testing
+
+Run tests locally before submission:
+
+```bash
+npm test                    # Run all tests with watch mode
+npm run test:ci             # Run tests with coverage (CI mode)
+bash scripts/presubmit.sh   # Run full pre-submission checklist
+```
+
+The presubmit checklist verifies:
+- ESLint linting
+- Jest tests
+- app.json configuration
+- Environment variables
+
+Integration tests can be skipped in CI environments:
+```bash
+SKIP_INTEGRATION_TESTS=true npm test
+```
+
+## Submitting to App Stores
+
+Complete submission with a single command:
+
+```bash
+bash scripts/submit-to-stores.sh
+```
+
+This script will:
+1. Run pre-submission checks (linting, tests, validation)
+2. Verify environment variables
+3. Ask which platform(s) to submit to
+4. Build and submit to Apple App Store and/or Google Play Store
+
+### Manual Submission
+
+If you prefer step-by-step control:
+
+```bash
+# Step 1: Pre-submission checks
+bash scripts/presubmit.sh
+
+# Step 2: Build
+eas build --platform ios      # iOS only
+eas build --platform android  # Android only
+eas build --platform all      # Both
+
+# Step 3: Submit (if not using --auto-submit)
+eas submit --platform ios
+eas submit --platform android
+```
+
+### Environment Setup
+
+For production deployment, set backend credentials:
+```bash
+export ADMIN_USERNAME="your_username"
+export ADMIN_PASSWORD="your_password"
+```
+
+Then run the submission script which will use these credentials.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
