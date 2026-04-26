@@ -19,9 +19,6 @@
     },
     "production": {
       "channel": "production",
-      "node": {
-        "version": "18.18.0"
-      },
       "env": {
         "npm_config_production": "true"
       }
