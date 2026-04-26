@@ -151,15 +151,17 @@ app.delete('/api/events/:id', async (req, res) => {
 
 // Build map HTML document
 function buildMapDocument(event) {
-  const routeData = JSON.stringify({
+  const routeDataObj = {
     name: event.name,
-    waypoints: event.waypoints.map((waypoint) => ({
+    waypoints: (event.waypoints || []).map((waypoint) => ({
       name: waypoint.name,
       lat: waypoint.lat,
       lng: waypoint.lng,
       order: waypoint.order,
     })),
-  }).replace(/</g, '\\u003c');
+  };
+
+  const routeDataJson = JSON.stringify(routeDataObj).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -203,8 +205,8 @@ function buildMapDocument(event) {
     <div style="display: flex; flex-direction: column; height: 100vh;">
       <div id="map" style="flex: 1;"></div>
       <div class="info-panel">
-        <h2>${routeData.name}</h2>
-        <p><strong>Waypoints:</strong> ${routeData.waypoints.length}</p>
+        <h2>${routeDataObj.name}</h2>
+        <p><strong>Waypoints:</strong> ${routeDataObj.waypoints.length}</p>
       </div>
     </div>
     <script
@@ -213,7 +215,7 @@ function buildMapDocument(event) {
       crossorigin=""
     ></script>
     <script>
-      const routeData = ${routeData};
+      const routeData = ${routeDataJson};
       const colors = {
         start: '#16a34a',
         middle: '#2563eb',
