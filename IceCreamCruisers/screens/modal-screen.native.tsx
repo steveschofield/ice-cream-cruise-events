@@ -271,8 +271,8 @@ export default function ModalScreen() {
               pinColor={color}
               opacity={isCompleted ? 0.4 : 1}
             >
-              <View style={[styles.numberOverlay, { borderColor: color }]}>
-                <Text style={styles.overlayNumber}>{waypoint.order}</Text>
+              <View style={[styles.numberOverlay, isNext && styles.numberOverlayLarge, { borderColor: color }]}>
+                <Text style={[styles.overlayNumber, isNext && styles.overlayNumberLarge]}>{waypoint.order}</Text>
               </View>
               <Callout>
                 <View style={styles.calloutContainer}>
@@ -405,6 +405,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 13,
     color: '#333',
+  },
+  numberOverlayLarge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  overlayNumberLarge: {
+    fontSize: 18,
   },
   dateTime: {
     fontSize: 14,
