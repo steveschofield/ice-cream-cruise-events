@@ -262,13 +262,13 @@ function buildMapDocument(event) {
         const isEnd = index === routeData.waypoints.length - 1;
         const color = isStart ? colors.start : isEnd ? colors.end : colors.middle;
 
-        L.circleMarker([waypoint.lat, waypoint.lng], {
-          radius: 8,
-          color,
-          fillColor: color,
-          fillOpacity: 1,
-          weight: 2,
-        })
+        const markerIcon = L.divIcon({
+          html: '<div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: ' + color + '; border-radius: 50%; border: 2px solid white; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">' + waypoint.order + '</div>',
+          iconSize: [32, 32],
+          className: 'custom-marker'
+        });
+
+        L.marker([waypoint.lat, waypoint.lng], { icon: markerIcon })
           .addTo(map)
           .bindPopup('<strong>' + escapeHtml(waypoint.order + '. ' + waypoint.name) + '</strong>');
       });
