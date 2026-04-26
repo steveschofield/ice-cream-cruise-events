@@ -1,8 +1,20 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const pool = require('./db');
 const path = require('path');
+
+// Validate required environment variables
+const requiredEnvVars = ['ADMIN_USERNAME', 'ADMIN_PASSWORD'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
+  console.error('   Please set these in your .env file or environment');
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -386,6 +398,9 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Admin panel at http://localhost:${PORT}/admin`);
-});
+  console.log(`\n✅ Server running on port ${PORT}`);
+  console.log(`📍 API endpoints: http://localhost:${PORT}/api/events`);
+  console.log(`🔐 Admin panel: http://localhost:${PORT}/admin`);
+  console.log(`   Username: ${process.env.ADMIN_USERNAME}`);
+  console.log(`\n🗺️  Test modal: http://localhost:${PORT}/modal?eventId=1`);
+  console.log(`\n`);
