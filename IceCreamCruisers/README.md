@@ -58,7 +58,19 @@ SKIP_INTEGRATION_TESTS=true npm test
 
 ## Submitting to App Stores
 
-Complete submission with a single command:
+### 1. Test builds locally first (recommended)
+
+Before uploading to EAS servers, test builds on your machine:
+
+```bash
+bash scripts/test-build.sh
+```
+
+This builds iOS and/or Android locally, catching issues before remote submission.
+
+### 2. Submit to stores
+
+Once local builds succeed:
 
 ```bash
 bash scripts/submit-to-stores.sh
