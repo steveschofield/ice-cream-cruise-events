@@ -1,6 +1,6 @@
 import { useLocalSearchParams, Link } from 'expo-router';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { API_URL } from '../config';
@@ -157,17 +157,31 @@ export default function ModalScreen() {
           longitudeDelta: 0.05,
         }}
       >
-        {event.waypoints.map((waypoint) => (
-          <Marker
-            key={waypoint.id}
-            coordinate={{
-              latitude: waypoint.lat,
-              longitude: waypoint.lng,
-            }}
-            title={waypoint.name}
-            pinColor={waypoint.order === 1 ? '#34C759' : waypoint.order === event.waypoints.length ? '#FF3B30' : '#007AFF'}
-          />
-        ))}
+        {event.waypoints.map((waypoint) => {
+          const isStart = waypoint.order === 1;
+          const isEnd = waypoint.order === event.waypoints.length;
+          const color = isStart ? '#34C759' : isEnd ? '#FF3B30' : '#007AFF';
+
+          return (
+            <Marker
+              key={waypoint.id}
+              coordinate={{
+                latitude: waypoint.lat,
+                longitude: waypoint.lng,
+              }}
+              pinColor={color}
+            >
+              <Callout>
+                <View style={styles.calloutContainer}>
+                  <View style={[styles.numberBadge, { backgroundColor: color }]}>
+                    <Text style={styles.numberText}>{waypoint.order}</Text>
+                  </View>
+                  <Text style={styles.calloutTitle}>{waypoint.name}</Text>
+                </View>
+              </Callout>
+            </Marker>
+          );
+        })}
         <Polyline coordinates={routeCoordinates} strokeColor="#007AFF" strokeWidth={3} />
 
         {currentLocation && (
@@ -275,5 +289,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 16,
+  },
+  calloutContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  numberBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  numberText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  calloutTitle: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
 });
