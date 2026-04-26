@@ -165,14 +165,10 @@ export default function ModalScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.detailsContainer} scrollEnabled={false}>
+      <View style={styles.titleBar}>
         <Text style={styles.modalTitle}>{event.name}</Text>
-        <Text style={styles.dateTime}>{event.date}</Text>
-        <Text style={styles.timeInfo}>🕖 Event Start: {event.eventTime}</Text>
-        <Text style={styles.timeInfo}>🚗 Cruise Start: {event.cruiseStartTime}</Text>
-        <Text style={styles.meetingPoint}>📍 {event.meetingPoint}</Text>
-        {cruiseStarted && <Text style={styles.statusText}>🔴 Cruise in progress</Text>}
-      </ScrollView>
+        {cruiseStarted && <Text style={styles.statusText}>🔴 Live</Text>}
+      </View>
 
       <MapView
         ref={mapRef}
@@ -260,6 +256,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  titleBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   detailsContainer: {
     paddingHorizontal: 16,
