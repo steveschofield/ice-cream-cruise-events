@@ -42,7 +42,7 @@ app.get('/api/events', async (req, res) => {
     const eventsWithWaypoints = await Promise.all(
       events.map(async (event) => {
         const waypoints = await dbAll(
-          'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order" FROM waypoints WHERE event_id = $1 ORDER BY order_index',
+          'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
           [event.id]
         );
 
@@ -77,7 +77,7 @@ app.get('/api/events/:id', async (req, res) => {
     }
 
     const waypoints = await dbAll(
-      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order" FROM waypoints WHERE event_id = $1 ORDER BY order_index',
+      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
       [eventId]
     );
 
@@ -116,8 +116,8 @@ app.post('/api/events', async (req, res) => {
     await Promise.all(
       waypoints.map((wp) =>
         pool.query(
-          'INSERT INTO waypoints (event_id, name, latitude, longitude, order_index) VALUES ($1, $2, $3, $4, $5)',
-          [eventId, wp.name, wp.lat, wp.lng, wp.order]
+          'INSERT INTO waypoints (event_id, name, latitude, longitude, order_index, notes) VALUES ($1, $2, $3, $4, $5, $6)',
+          [eventId, wp.name, wp.lat, wp.lng, wp.order, wp.notes || null]
         )
       )
     );
@@ -304,7 +304,7 @@ app.get('/modal', async (req, res) => {
     }
 
     const waypoints = await dbAll(
-      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order" FROM waypoints WHERE event_id = $1 ORDER BY order_index',
+      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
       [eventId]
     );
 

@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-nati
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { API_URL } from '../config';
 
 function toCoordinateValue(value) {
@@ -41,6 +42,7 @@ export default function ModalScreen() {
   const [event, setEvent] = useState(null);
   const [completedWaypoints, setCompletedWaypoints] = useState(new Set());
   const [nextWaypointIndex, setNextWaypointIndex] = useState(0);
+  const [distanceToNext, setDistanceToNext] = useState(null);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -84,6 +86,7 @@ export default function ModalScreen() {
       return;
     }
 
+    await activateKeepAwakeAsync();
     setCruiseStarted(true);
 
     const subscription = await Location.watchPositionAsync(
@@ -123,6 +126,15 @@ export default function ModalScreen() {
 
           setCompletedWaypoints(completed);
           setNextWaypointIndex(nextIdx);
+
+          const nextWp = event.waypoints[nextIdx];
+          const kmToNext = (
+            Math.sqrt(
+              Math.pow(nextWp.lat - newCoord.latitude, 2) +
+              Math.pow(nextWp.lng - newCoord.longitude, 2)
+            ) * 111
+          ).toFixed(1);
+          setDistanceToNext(kmToNext);
         }
 
         mapRef.current?.animateToRegion({
@@ -136,13 +148,15 @@ export default function ModalScreen() {
     setLocationSubscription(subscription);
   };
 
-  const stopCruise = () => {
+  const stopCruise = async () => {
     if (locationSubscription) {
       locationSubscription.remove();
       setLocationSubscription(null);
     }
+    await deactivateKeepAwake();
     setCruiseStarted(false);
     setCurrentLocation(null);
+    setDistanceToNext(null);
   };
 
   if (!event) {
@@ -166,7 +180,12 @@ export default function ModalScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.titleBar}>
-        <Text style={styles.modalTitle}>{event.name}</Text>
+        <View>
+          <Text style={styles.modalTitle}>{event.name}</Text>
+          {cruiseStarted && distanceToNext && (
+            <Text style={styles.distanceText}>📍 {distanceToNext} km to next stop</Text>
+          )}
+        </View>
         {cruiseStarted && <Text style={styles.statusText}>🔴 Live</Text>}
       </View>
 
@@ -213,7 +232,10 @@ export default function ModalScreen() {
                   <View style={[styles.numberBadge, { backgroundColor: color }]}>
                     <Text style={styles.numberText}>{waypoint.order}</Text>
                   </View>
-                  <Text style={styles.calloutTitle}>{waypoint.name}</Text>
+                  <View style={styles.calloutTextContainer}>
+                    <Text style={styles.calloutTitle}>{waypoint.name}</Text>
+                    {waypoint.notes && <Text style={styles.calloutNotes}>{waypoint.notes}</Text>}
+                  </View>
                 </View>
               </Callout>
             </Marker>
@@ -281,7 +303,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  distanceText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   numberOverlay: {
     width: 32,
@@ -363,11 +390,12 @@ const styles = StyleSheet.create({
   },
   calloutContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: 'white',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 6,
+    maxWidth: 280,
   },
   numberBadge: {
     width: 28,
@@ -376,15 +404,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
+    flexShrink: 0,
   },
   numberText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
   },
+  calloutTextContainer: {
+    flex: 1,
+  },
   calloutTitle: {
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+    marginBottom: 2,
+  },
+  calloutNotes: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

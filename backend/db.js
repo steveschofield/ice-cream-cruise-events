@@ -27,8 +27,13 @@ async function initializeDatabase() {
         name TEXT NOT NULL,
         latitude DECIMAL NOT NULL,
         longitude DECIMAL NOT NULL,
-        order_index INTEGER NOT NULL
+        order_index INTEGER NOT NULL,
+        notes TEXT
       )
+    `);
+
+    await pool.query(`
+      ALTER TABLE waypoints ADD COLUMN IF NOT EXISTS notes TEXT
     `);
   } catch (error) {
     console.error('Error initializing database:', error);
