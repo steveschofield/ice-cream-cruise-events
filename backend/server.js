@@ -149,6 +149,165 @@ app.delete('/api/events/:id', async (req, res) => {
   }
 });
 
+// Build map HTML document
+function buildMapDocument(event) {
+  const routeData = JSON.stringify({
+    name: event.name,
+    waypoints: event.waypoints.map((waypoint) => ({
+      name: waypoint.name,
+      lat: waypoint.lat,
+      lng: waypoint.lng,
+      order: waypoint.order,
+    })),
+  }).replace(/</g, '\\u003c');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      html, body, #map {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      .leaflet-container {
+        background: #eef3f8;
+      }
+      .info-panel {
+        padding: 16px;
+        background: white;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .info-panel h2 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+      }
+      .info-panel p {
+        margin: 4px 0;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="display: flex; flex-direction: column; height: 100vh;">
+      <div id="map" style="flex: 1;"></div>
+      <div class="info-panel">
+        <h2>${routeData.name}</h2>
+        <p><strong>Waypoints:</strong> ${routeData.waypoints.length}</p>
+      </div>
+    </div>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const routeData = ${routeData};
+      const colors = {
+        start: '#16a34a',
+        middle: '#2563eb',
+        end: '#dc2626',
+      };
+
+      const map = L.map('map', {
+        zoomControl: true,
+        attributionControl: true,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const escapeHtml = (value) =>
+        String(value).replace(/[&<>"']/g, (character) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        }[character]));
+
+      const coordinates = routeData.waypoints.map((waypoint) => [waypoint.lat, waypoint.lng]);
+
+      if (coordinates.length === 0) {
+        map.setView([43.169, -85.212], 9);
+      } else if (coordinates.length === 1) {
+        map.setView(coordinates[0], 13);
+      } else {
+        map.fitBounds(L.latLngBounds(coordinates).pad(0.2));
+      }
+
+      if (coordinates.length > 1) {
+        L.polyline(coordinates, {
+          color: '#2563eb',
+          weight: 4,
+          opacity: 0.85,
+        }).addTo(map);
+      }
+
+      routeData.waypoints.forEach((waypoint, index) => {
+        const isStart = index === 0;
+        const isEnd = index === routeData.waypoints.length - 1;
+        const color = isStart ? colors.start : isEnd ? colors.end : colors.middle;
+
+        L.circleMarker([waypoint.lat, waypoint.lng], {
+          radius: 8,
+          color,
+          fillColor: color,
+          fillOpacity: 1,
+          weight: 2,
+        })
+          .addTo(map)
+          .bindPopup('<strong>' + escapeHtml(waypoint.order + '. ' + waypoint.name) + '</strong>');
+      });
+    </script>
+  </body>
+</html>`;
+}
+
+// Serve modal map view
+app.get('/modal', async (req, res) => {
+  try {
+    const eventId = req.query.eventId;
+    if (!eventId) {
+      return res.status(400).send('<html><body><h1>Missing eventId parameter</h1></body></html>');
+    }
+
+    const event = await dbGet('SELECT * FROM events WHERE id = $1', [eventId]);
+    if (!event) {
+      return res.status(404).send('<html><body><h1>Event not found</h1></body></html>');
+    }
+
+    const waypoints = await dbAll(
+      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order" FROM waypoints WHERE event_id = $1 ORDER BY order_index',
+      [eventId]
+    );
+
+    const eventWithWaypoints = {
+      ...event,
+      name: event.name,
+      waypoints: waypoints || [],
+    };
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(buildMapDocument(eventWithWaypoints));
+  } catch (error) {
+    res.status(500).send(`<html><body><h1>Error loading event</h1><p>${error.message}</p></body></html>`);
+  }
+});
+
 // Serve admin panel
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(publicDir, 'admin.html'));
