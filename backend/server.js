@@ -151,13 +151,17 @@ app.delete('/api/events/:id', async (req, res) => {
 
 // Build map HTML document
 function buildMapDocument(event) {
+  console.log('buildMapDocument - event:', event);
+  console.log('buildMapDocument - event.waypoints:', event.waypoints);
+
+  const waypointsArray = Array.isArray(event.waypoints) ? event.waypoints : [];
   const routeDataObj = {
-    name: event.name,
-    waypoints: (event.waypoints || []).map((waypoint) => ({
-      name: waypoint.name,
-      lat: waypoint.lat,
-      lng: waypoint.lng,
-      order: waypoint.order,
+    name: event.name || 'Route Map',
+    waypoints: waypointsArray.map((waypoint) => ({
+      name: waypoint.name || 'Waypoint',
+      lat: parseFloat(waypoint.lat),
+      lng: parseFloat(waypoint.lng),
+      order: waypoint.order || 0,
     })),
   };
 
@@ -216,6 +220,13 @@ function buildMapDocument(event) {
     ></script>
     <script>
       const routeData = ${routeDataJson};
+      console.log('routeData:', routeData);
+
+      if (!routeData || !routeData.waypoints) {
+        document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Error: No route data available</div>';
+        throw new Error('routeData or waypoints is undefined');
+      }
+
       const colors = {
         start: '#16a34a',
         middle: '#2563eb',
@@ -241,7 +252,7 @@ function buildMapDocument(event) {
           "'": '&#39;',
         }[character]));
 
-      const coordinates = routeData.waypoints.map((waypoint) => [waypoint.lat, waypoint.lng]);
+      const coordinates = (routeData.waypoints || []).map((waypoint) => [waypoint.lat, waypoint.lng]);
 
       if (coordinates.length === 0) {
         map.setView([43.169, -85.212], 9);
