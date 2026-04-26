@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ice Cream Cruisers - Admin Panel</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: #34C759;
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      opacity: 0.9;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .panel h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 9px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #007AFF;
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+
+    button {
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #007AFF;
+      color: white;
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      background: #0051D5;
+    }
+
+    .btn-success {
+      background: #34C759;
+      color: white;
+      width: 100%;
+    }
+
+    .btn-success:hover {
+      background: #2BA84B;
+    }
+
+    .btn-danger {
+      background: #FF3B30;
+      color: white;
+      width: 100%;
+    }
+
+    .btn-danger:hover {
+      background: #E02420;
+    }
+
+    .btn-small {
+      padding: 6px 10px;
+      font-size: 12px;
+      width: auto;
+    }
+
+    #map {
+      height: 600px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .map-instructions {
+      background: #E5F5FF;
+      border: 1px solid #007AFF;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #0051D5;
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+
+    .waypoint-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    .waypoint-item {
+      background: #f9f9f9;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .waypoint-item.last {
+      margin-bottom: 0;
+    }
+
+    .waypoint-info {
+      flex: 1;
+    }
+
+    .waypoint-name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .waypoint-coords {
+      color: #666;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .waypoint-remove {
+      color: #FF3B30;
+      cursor: pointer;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+
+    .events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .event-card {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 6px;
+      border-left: 3px solid #007AFF;
+      font-size: 12px;
+    }
+
+    .event-card h3 {
+      font-weight: 600;
+      margin-bottom: 3px;
+      color: #333;
+    }
+
+    .event-card p {
+      color: #666;
+      margin-bottom: 2px;
+    }
+
+    .event-card .waypoint-count {
+      color: #34C759;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .event-card .delete-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .status.success {
+      background: #E5F5E5;
+      color: #34C759;
+    }
+
+    .status.warning {
+      background: #FFF3CD;
+      color: #856404;
+    }
+
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      #map {
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍦 Ice Cream Cruisers</h1>
+      <p>Admin Panel - Create & Manage Routes</p>
+    </header>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Event Form -->
+        <div class="panel">
+          <h2>Event Details</h2>
+          <form id="eventForm">
+            <div class="form-group">
+              <label for="eventName">Name</label>
+              <input type="text" id="eventName" placeholder="Event name" value="Ice Cream Cruise #1" required>
+            </div>
+
+            <div class="form-group">
+              <label for="eventDate">Date</label>
+              <input type="date" id="eventDate" value="2026-05-08" required>
+            </div>
+
+            <div class="form-group">
+              <label for="eventTime">Event Start Time</label>
+              <input type="time" id="eventTime" value="19:00" required>
+            </div>
+
+            <div class="form-group">
+              <label for="cruiseStartTime">Cruise Start Time</label>
+              <input type="time" id="cruiseStartTime" value="20:00" required>
+            </div>
+
+            <div class="form-group">
+              <label for="meetingPoint">Meeting Point</label>
+              <input type="text" id="meetingPoint" placeholder="Location" value="The Dairy Barn, Greenville MI 48838" required>
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" placeholder="Optional description">Enjoy Ice Cream and sharing your cool ride with the Greenville community.</textarea>
+            </div>
+
+            <button type="button" id="saveEventBtn" class="btn-success">Save Event</button>
+          </form>
+        </div>
+
+        <!-- Waypoints -->
+        <div class="panel">
+          <h2>Waypoints</h2>
+          <div style="font-size: 12px; color: #666; margin-bottom: 12px;">
+            <strong id="waypointCount">0</strong> waypoints captured
+          </div>
+          <div class="waypoint-list" id="waypointList" style="min-height: 100px;">
+            <p style="color: #999; text-align: center; padding: 20px 0;">Click on the map to add waypoints</p>
+          </div>
+          <button type="button" id="clearWaypointsBtn" class="btn-danger" style="margin-top: 8px; display: none;">Clear All</button>
+        </div>
+
+        <!-- Events List -->
+        <div class="panel">
+          <h2>Recent Events</h2>
+          <div class="events-list" id="eventsList">
+            <p style="color: #999; text-align: center; padding: 20px 0; font-size: 12px;">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div>
+        <div class="panel">
+          <h2>Create Route</h2>
+          <div class="map-instructions">
+            <strong>Click on the map</strong> to place waypoints. They will be numbered in order. Double-click to remove a waypoint.
+          </div>
+          <div id="map"></div>
+          <button type="button" id="resetMapBtn" class="btn-secondary btn-small" style="margin-top: 0;">Reset Map View</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = `${window.location.protocol}//${window.location.host}/api`;
+    let map = null;
+    let waypoints = [];
+    let waypointMarkers = [];
+    let routePolyline = null;
+
+    // Initialize map
+    function initMap() {
+      map = L.map('map').setView([43.17, -85.21], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      map.on('click', onMapClick);
+    }
+
+    function onMapClick(e) {
+      const waypoint = {
+        id: waypoints.length + 1,
+        name: `Waypoint ${waypoints.length + 1}`,
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        order: waypoints.length + 1,
+      };
+
+      waypoints.push(waypoint);
+      addWaypointMarker(waypoint);
+      updateRoutePolyline();
+      updateWaypointList();
+    }
+
+    function addWaypointMarker(waypoint) {
+      const color = waypoint.order === 1 ? '#34C759' : waypoint.order === waypoints.length ? '#FF3B30' : '#007AFF';
+
+      const marker = L.circleMarker([waypoint.lat, waypoint.lng], {
+        radius: 8,
+        fillColor: color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8,
+      })
+        .addTo(map)
+        .bindPopup(`<strong>${waypoint.name}</strong><br>${waypoint.lat.toFixed(6)}, ${waypoint.lng.toFixed(6)}`);
+
+      // Add a label marker next to the waypoint
+      const labelIcon = L.divIcon({
+        html: `<div style="background: ${color}; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white;">${waypoint.order}</div>`,
+        iconSize: [28, 28],
+        className: 'waypoint-label-marker',
+      });
+
+      const labelMarker = L.marker([waypoint.lat, waypoint.lng], { icon: labelIcon, zIndexOffset: 100 })
+        .addTo(map);
+
+      // Double-click to remove
+      marker.on('dblclick', () => removeWaypoint(waypoint.id));
+      labelMarker.on('dblclick', () => removeWaypoint(waypoint.id));
+
+      waypointMarkers.push(marker);
+      waypointMarkers.push(labelMarker);
+    }
+
+    function updateRoutePolyline() {
+      if (routePolyline) {
+        map.removeLayer(routePolyline);
+      }
+
+      if (waypoints.length > 1) {
+        const coords = waypoints.map((wp) => [wp.lat, wp.lng]);
+        routePolyline = L.polyline(coords, {
+          color: '#007AFF',
+          weight: 3,
+          opacity: 0.7,
+        }).addTo(map);
+      }
+    }
+
+    function removeWaypoint(id) {
+      waypoints = waypoints.filter((w) => w.id !== id);
+      waypointMarkers.forEach((marker) => map.removeLayer(marker));
+      waypointMarkers = [];
+
+      waypoints.forEach((wp, idx) => {
+        wp.order = idx + 1;
+        addWaypointMarker(wp);
+      });
+
+      updateRoutePolyline();
+      updateWaypointList();
+    }
+
+    function updateWaypointList() {
+      const count = document.getElementById('waypointCount');
+      const list = document.getElementById('waypointList');
+      const clearBtn = document.getElementById('clearWaypointsBtn');
+
+      count.textContent = waypoints.length;
+      clearBtn.style.display = waypoints.length > 0 ? 'block' : 'none';
+
+      if (waypoints.length === 0) {
+        list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px 0;">Click on the map to add waypoints</p>';
+        return;
+      }
+
+      list.innerHTML = waypoints
+        .map((wp, idx) => `
+        <div class="waypoint-item ${idx === waypoints.length - 1 ? 'last' : ''}">
+          <div class="waypoint-info">
+            <div class="waypoint-name">${wp.name}</div>
+            <div class="waypoint-coords">${wp.lat.toFixed(6)}, ${wp.lng.toFixed(6)}</div>
+          </div>
+          <div class="waypoint-remove" onclick="removeWaypoint(${wp.id})" title="Click to remove">✕</div>
+        </div>
+      `)
+        .join('');
+    }
+
+    document.getElementById('clearWaypointsBtn').addEventListener('click', () => {
+      waypoints = [];
+      waypointMarkers.forEach((marker) => map.removeLayer(marker));
+      waypointMarkers = [];
+      updateRoutePolyline();
+      updateWaypointList();
+    });
+
+    document.getElementById('resetMapBtn').addEventListener('click', () => {
+      map.setView([43.17, -85.21], 13);
+    });
+
+    document.getElementById('saveEventBtn').addEventListener('click', async () => {
+      const eventName = document.getElementById('eventName').value;
+      const dateInput = document.getElementById('eventDate').value;
+      // Format date picker value (YYYY-MM-DD) to readable format (Month Day, Year)
+      const [year, month, day] = dateInput.split('-');
+      const date = new Date(year, month - 1, day);
+      const eventDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const eventTime = document.getElementById('eventTime').value;
+      const cruiseStartTime = document.getElementById('cruiseStartTime').value;
+      const meetingPoint = document.getElementById('meetingPoint').value;
+      const description = document.getElementById('description').value;
+
+      if (!eventName || !eventDate || !eventTime || !cruiseStartTime || !meetingPoint) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      if (waypoints.length === 0) {
+        alert('Please add at least one waypoint by clicking on the map');
+        return;
+      }
+
+      try {
+        const saveBtn = document.getElementById('saveEventBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        console.log('Sending event:', { eventName, eventDate, eventTime, meetingPoint, waypoints });
+
+        const response = await fetch(`${API_URL}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: eventName,
+            date: eventDate,
+            eventTime: eventTime,
+            cruiseStartTime: cruiseStartTime,
+            meetingPoint: meetingPoint,
+            description: description,
+            waypoints: waypoints,
+          }),
+        });
+
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (response.ok) {
+          alert('Event created successfully!');
+          document.getElementById('eventForm').reset();
+          waypoints = [];
+          waypointMarkers.forEach((marker) => map.removeLayer(marker));
+          waypointMarkers = [];
+          updateRoutePolyline();
+          updateWaypointList();
+          loadEvents();
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Event';
+        } else {
+          alert(`Error creating event: ${data.error || 'Unknown error'}`);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Event';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+        const saveBtn = document.getElementById('saveEventBtn');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Event';
+      }
+    });
+
+    async function loadEvents() {
+      try {
+        const response = await fetch(`${API_URL}/events`);
+        console.log('Response status:', response.status);
+
+        const events = await response.json();
+        console.log('Events data:', events);
+
+        const list = document.getElementById('eventsList');
+
+        if (!Array.isArray(events) || events.length === 0) {
+          list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px 0; font-size: 12px;">No events yet</p>';
+          return;
+        }
+
+        list.innerHTML = events
+          .slice()
+          .reverse()
+          .map((event) => `
+        <div class="event-card">
+          <h3>${event.name}</h3>
+          <p>${event.date} • ${event.time}</p>
+          <p>${event.meetingPoint}</p>
+          <p class="waypoint-count">${event.waypoints.length} waypoints</p>
+          <button class="btn-danger delete-btn btn-small" onclick="deleteEvent(${event.id})">Delete</button>
+        </div>
+      `)
+          .join('');
+      } catch (error) {
+        console.error('Error loading events:', error);
+        document.getElementById('eventsList').innerHTML = '<p style="color: #999;">Error loading</p>';
+      }
+    }
+
+    async function deleteEvent(eventId) {
+      if (confirm('Delete this event?')) {
+        try {
+          await fetch(`${API_URL}/events/${eventId}`, { method: 'DELETE' });
+          loadEvents();
+        } catch (error) {
+          alert('Error deleting event');
+        }
+      }
+    }
+
+    // Initialize on page load
+    window.addEventListener('load', () => {
+      initMap();
+      loadEvents();
+      setInterval(loadEvents, 5000);
+    });
+  </script>
+</body>
+</html>
