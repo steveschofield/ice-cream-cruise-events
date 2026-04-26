@@ -42,6 +42,35 @@ async function dbRun(query, params) {
   return { lastID: result.rows[0]?.id };
 }
 
+// Basic auth middleware for admin
+const basicAuth = (req, res, next) => {
+  const auth = req.headers.authorization;
+
+  if (!auth || !auth.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+    return res.status(401).send('Authentication required');
+  }
+
+  const base64Credentials = auth.slice(6);
+  const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
+  const [username, password] = credentials.split(':');
+
+  const adminUser = process.env.ADMIN_USERNAME;
+  const adminPass = process.env.ADMIN_PASSWORD;
+
+  if (!adminUser || !adminPass) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+    return res.status(503).send('Admin authentication not configured');
+  }
+
+  if (username === adminUser && password === adminPass) {
+    return next();
+  }
+
+  res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+  res.status(401).send('Invalid credentials');
+};
+
 // Get all events with waypoints
 app.get('/api/events', async (req, res) => {
   try {
@@ -342,35 +371,6 @@ app.get('/modal', async (req, res) => {
   }
 });
 
-// Basic auth middleware for admin
-const basicAuth = (req, res, next) => {
-  const auth = req.headers.authorization;
-
-  if (!auth || !auth.startsWith('Basic ')) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
-    return res.status(401).send('Authentication required');
-  }
-
-  const base64Credentials = auth.slice(6);
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
-  const [username, password] = credentials.split(':');
-
-  const adminUser = process.env.ADMIN_USERNAME;
-  const adminPass = process.env.ADMIN_PASSWORD;
-
-  if (!adminUser || !adminPass) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
-    return res.status(503).send('Admin authentication not configured');
-  }
-
-  if (username === adminUser && password === adminPass) {
-    return next();
-  }
-
-  res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
-  res.status(401).send('Invalid credentials');
-};
-
 // Serve admin panel
 app.get('/admin', basicAuth, (req, res) => {
   res.sendFile(path.join(publicDir, 'admin.html'));
@@ -404,3 +404,4 @@ app.listen(PORT, () => {
   console.log(`   Username: ${process.env.ADMIN_USERNAME}`);
   console.log(`\n🗺️  Test modal: http://localhost:${PORT}/modal?eventId=1`);
   console.log(`\n`);
+});
