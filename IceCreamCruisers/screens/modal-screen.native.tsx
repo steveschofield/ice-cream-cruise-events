@@ -250,13 +250,15 @@ export default function ModalScreen() {
           const isCompleted = completedWaypoints.has(waypoint.id);
           const isNext = idx === nextWaypointIndex && !isCompleted;
 
-          let color = '#FF3B30';
+          let color = '#FF3B30';  // Default: red for start/end
           if (isCompleted) {
-            color = '#CCCCCC';
+            color = '#CCCCCC';  // Gray for completed
+          } else if (isStart || isEnd) {
+            color = '#FF3B30';  // Always red for start and end
           } else if (isNext) {
-            color = '#FFD700';
-          } else if (!isStart && !isEnd) {
-            color = '#007AFF';
+            color = '#FFD700';  // Gold for next (middle waypoints only)
+          } else {
+            color = '#007AFF';  // Blue for other middle waypoints
           }
 
           return (
