@@ -129,8 +129,9 @@ echo ""
 # 6. Check/Install Fastlane (required for iOS builds)
 echo -e "${BLUE}6️⃣  Checking Fastlane...${NC}"
 if ! command -v fastlane &> /dev/null; then
-  echo -e "${YELLOW}Installing Fastlane...${NC}"
-  sudo gem install fastlane -NV
+  echo -e "${YELLOW}Installing Fastlane via Homebrew...${NC}"
+  brew tap fastlane/fastlane
+  brew install fastlane
   installed=$((installed + 1))
 else
   FASTLANE_VERSION=$(fastlane --version)

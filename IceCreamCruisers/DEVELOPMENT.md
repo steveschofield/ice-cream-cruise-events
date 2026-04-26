@@ -155,11 +155,13 @@ xcode-select --version
 ### Fastlane (for iOS builds)
 
 ```bash
-# Install via Ruby gems
-sudo gem install fastlane -NV
+# Install via Homebrew (recommended)
+brew tap fastlane/fastlane
+brew install fastlane
 
 # Verify
 fastlane --version
+which fastlane
 ```
 
 ## Troubleshooting
