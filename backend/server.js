@@ -98,7 +98,7 @@ app.get('/api/events/:id', async (req, res) => {
 });
 
 // Create event with waypoints
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', basicAuth, async (req, res) => {
   try {
     const { name, date, eventTime, cruiseStartTime, meetingPoint, description, waypoints } = req.body;
 
@@ -139,7 +139,7 @@ app.post('/api/events', async (req, res) => {
 });
 
 // Delete event
-app.delete('/api/events/:id', async (req, res) => {
+app.delete('/api/events/:id', basicAuth, async (req, res) => {
   try {
     const eventId = req.params.id;
     await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
@@ -149,11 +149,20 @@ app.delete('/api/events/:id', async (req, res) => {
   }
 });
 
+// HTML escape function
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return String(text).replace(/[&<>"']/g, (char) => map[char]);
+}
+
 // Build map HTML document
 function buildMapDocument(event) {
-  console.log('buildMapDocument - event:', event);
-  console.log('buildMapDocument - event.waypoints:', event.waypoints);
-
   const waypointsArray = Array.isArray(event.waypoints) ? event.waypoints : [];
   const routeDataObj = {
     name: event.name || 'Route Map',
@@ -209,8 +218,8 @@ function buildMapDocument(event) {
     <div style="display: flex; flex-direction: column; height: 100vh;">
       <div id="map" style="flex: 1;"></div>
       <div class="info-panel">
-        <h2>${routeDataObj.name}</h2>
-        <p><strong>Waypoints:</strong> ${routeDataObj.waypoints.length}</p>
+        <h2>${escapeHtml(routeDataObj.name)}</h2>
+        <p><strong>Waypoints:</strong> ${escapeHtml(String(routeDataObj.waypoints.length))}</p>
       </div>
     </div>
     <script
@@ -220,7 +229,6 @@ function buildMapDocument(event) {
     ></script>
     <script>
       const routeData = ${routeDataJson};
-      console.log('routeData:', routeData);
 
       if (!routeData || !routeData.waypoints) {
         document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Error: No route data available</div>';
@@ -317,7 +325,8 @@ app.get('/modal', async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(buildMapDocument(eventWithWaypoints));
   } catch (error) {
-    res.status(500).send(`<html><body><h1>Error loading event</h1><p>${error.message}</p></body></html>`);
+    console.error('Modal endpoint error:', error);
+    res.status(500).send('<html><body><h1>Error</h1><p>An error occurred. Please try again.</p></body></html>');
   }
 });
 
@@ -334,8 +343,13 @@ const basicAuth = (req, res, next) => {
   const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
   const [username, password] = credentials.split(':');
 
-  const adminUser = process.env.ADMIN_USERNAME || 'admin';
-  const adminPass = process.env.ADMIN_PASSWORD || 'admin';
+  const adminUser = process.env.ADMIN_USERNAME;
+  const adminPass = process.env.ADMIN_PASSWORD;
+
+  if (!adminUser || !adminPass) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+    return res.status(503).send('Admin authentication not configured');
+  }
 
   if (username === adminUser && password === adminPass) {
     return next();
