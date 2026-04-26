@@ -3,12 +3,31 @@ import { Linking, StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'r
 import { useState, useEffect } from 'react';
 import { API_URL } from '../config';
 
-function toCoordinateValue(value) {
+interface Waypoint {
+  lat: number | null;
+  lng: number | null;
+  name: string;
+  notes?: string;
+  order?: number;
+}
+
+interface Event {
+  id: number;
+  name: string;
+  date: string;
+  eventTime: string;
+  cruiseStartTime: string;
+  meetingPoint: string;
+  description: string;
+  waypoints: Waypoint[];
+}
+
+function toCoordinateValue(value: number | string): number | null {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function normalizeEvent(rawEvent) {
+function normalizeEvent(rawEvent: any): Event | null {
   if (!rawEvent) {
     return null;
   }
@@ -29,7 +48,7 @@ function normalizeEvent(rawEvent) {
   };
 }
 
-function buildMapsUrl(event) {
+function buildMapsUrl(event: Event | null): string | null {
   if (!event || event.waypoints.length === 0) {
     return null;
   }
@@ -41,7 +60,7 @@ function buildMapsUrl(event) {
 
   const [origin, ...rest] = event.waypoints;
   const destination = rest[rest.length - 1];
-  const middleWaypoints = rest.slice(0, -1).map((waypoint) => `${waypoint.lat},${waypoint.lng}`);
+  const middleWaypoints = rest.slice(0, -1).map((waypoint: Waypoint) => `${waypoint.lat},${waypoint.lng}`);
   const params = new URLSearchParams({
     api: '1',
     origin: `${origin.lat},${origin.lng}`,
@@ -56,7 +75,7 @@ function buildMapsUrl(event) {
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
-function buildMapDocument(event) {
+function buildMapDocument(event: Event | null): string | null {
   const routeData = JSON.stringify({
     name: event.name,
     waypoints: event.waypoints.map((waypoint) => ({
@@ -165,7 +184,7 @@ function buildMapDocument(event) {
 
 export default function ModalScreen() {
   const { eventId } = useLocalSearchParams();
-  const [event, setEvent] = useState(null);
+  const [event, setEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     const loadEvent = async () => {

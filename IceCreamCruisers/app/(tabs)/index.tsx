@@ -3,8 +3,18 @@ import { Link, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { API_URL } from '../../config';
 
+interface Event {
+  id: number;
+  name: string;
+  date: string;
+  eventTime: string;
+  cruiseStartTime: string;
+  meetingPoint: string;
+  description: string;
+}
+
 export default function HomeScreen() {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(

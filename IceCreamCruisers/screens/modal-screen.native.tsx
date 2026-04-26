@@ -7,12 +7,30 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Audio } from 'expo-av';
 import { API_URL } from '../config';
 
-function toCoordinateValue(value) {
+interface Waypoint {
+  lat: number | null;
+  lng: number | null;
+  name: string;
+  notes?: string;
+}
+
+interface Event {
+  id: number;
+  name: string;
+  date: string;
+  eventTime: string;
+  cruiseStartTime: string;
+  meetingPoint: string;
+  description: string;
+  waypoints: Waypoint[];
+}
+
+function toCoordinateValue(value: number | string): number | null {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function normalizeEvent(rawEvent) {
+function normalizeEvent(rawEvent: any): Event | null {
   if (!rawEvent) {
     return null;
   }
@@ -33,21 +51,27 @@ function normalizeEvent(rawEvent) {
   };
 }
 
+interface LocationData {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
+
 export default function ModalScreen() {
   const { eventId } = useLocalSearchParams();
-  const mapRef = useRef(null);
+  const mapRef = useRef<MapView>(null);
 
   const [cruiseStarted, setCruiseStarted] = useState(false);
   const [cruisePaused, setCruisePaused] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [locationSubscription, setLocationSubscription] = useState(null);
-  const [event, setEvent] = useState(null);
-  const [completedWaypoints, setCompletedWaypoints] = useState(new Set());
+  const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
+  const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [completedWaypoints, setCompletedWaypoints] = useState(new Set<number>());
   const [nextWaypointIndex, setNextWaypointIndex] = useState(0);
-  const [distanceToNext, setDistanceToNext] = useState(null);
+  const [distanceToNext, setDistanceToNext] = useState<number | null>(null);
   const [currentSpeed, setCurrentSpeed] = useState(0);
-  const [alertedWaypoints, setAlertedWaypoints] = useState(new Set());
-  const lastLocationRef = useRef(null);
+  const [alertedWaypoints, setAlertedWaypoints] = useState(new Set<number>());
+  const lastLocationRef = useRef<LocationData | null>(null);
 
   useEffect(() => {
     const loadEvent = async () => {

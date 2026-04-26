@@ -1,1 +1,1 @@
-export { default } from '../screens/modal-screen';
+export { default } from '../screens/modal-screen.native';
