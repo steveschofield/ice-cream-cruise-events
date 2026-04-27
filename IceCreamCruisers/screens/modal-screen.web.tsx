@@ -5,8 +5,8 @@ import { API_URL } from '../config';
 
 interface Waypoint {
   id: number;
-  lat: number | null;
-  lng: number | null;
+  lat: number;
+  lng: number;
   name: string;
   notes?: string;
   order?: number;
@@ -77,6 +77,10 @@ function buildMapsUrl(event: Event | null): string | null {
 }
 
 function buildMapDocument(event: Event | null): string | null {
+  if (!event) {
+    return null;
+  }
+
   const routeData = JSON.stringify({
     name: event.name,
     waypoints: event.waypoints.map((waypoint) => ({
@@ -230,13 +234,15 @@ export default function ModalScreen() {
 
         <Text style={styles.sectionTitle}>Route Map</Text>
         <View style={styles.mapCard}>
-          <iframe
-            title={`${event.name} route map`}
-            srcDoc={mapDocument}
-            style={iframeStyle}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+          {mapDocument && (
+            <iframe
+              title={`${event.name} route map`}
+              srcDoc={mapDocument}
+              style={iframeStyle}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          )}
         </View>
 
         {mapsUrl && (

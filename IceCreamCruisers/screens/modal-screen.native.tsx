@@ -9,8 +9,8 @@ import { API_URL } from '../config';
 
 interface Waypoint {
   id: number;
-  lat: number | null;
-  lng: number | null;
+  lat: number;
+  lng: number;
   name: string;
   notes?: string;
   order?: number;
@@ -131,7 +131,7 @@ export default function ModalScreen() {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         };
-        setCurrentLocation(newCoord);
+        setCurrentLocation({ ...newCoord, timestamp: location.timestamp });
 
         if (lastLocationRef.current) {
           const deltaLat = newCoord.latitude - lastLocationRef.current.latitude;
@@ -143,7 +143,7 @@ export default function ModalScreen() {
         lastLocationRef.current = { ...newCoord, timestamp: location.timestamp };
 
         if (event && event.waypoints.length > 0) {
-          const completed = new Set();
+          const completed = new Set<number>();
           let nextIdx = 0;
           let closestDist = Infinity;
 
@@ -167,12 +167,14 @@ export default function ModalScreen() {
           setNextWaypointIndex(nextIdx);
 
           const nextWp = event.waypoints[nextIdx];
-          const kmToNext = (
-            Math.sqrt(
-              Math.pow(nextWp.lat - newCoord.latitude, 2) +
-              Math.pow(nextWp.lng - newCoord.longitude, 2)
-            ) * 111
-          ).toFixed(1);
+          const kmToNext = Number(
+            (
+              Math.sqrt(
+                Math.pow(nextWp.lat - newCoord.latitude, 2) +
+                Math.pow(nextWp.lng - newCoord.longitude, 2)
+              ) * 111
+            ).toFixed(1)
+          );
           setDistanceToNext(kmToNext);
 
           if (kmToNext < 1 && !alertedWaypoints.has(nextWp.id)) {
