@@ -20,9 +20,9 @@ if [ ! -f "app.json" ]; then
   exit 1
 fi
 
-# Step 1: Pre-submission checks
+# Step 1: Pre-submission checks (skip integration tests - no backend running)
 echo -e "${BLUE}Step 1: Running pre-submission checks...${NC}"
-bash scripts/presubmit.sh
+SKIP_INTEGRATION_TESTS=true npm run presubmit
 if [ $? -ne 0 ]; then
   echo -e "${RED}✗ Pre-submission checks failed. Please fix issues above before continuing.${NC}"
   exit 1

@@ -36,7 +36,7 @@ echo ""
 
 # 3. Unit & Integration tests
 echo "🧪 Running tests..."
-npm run test:ci
+SKIP_INTEGRATION_TESTS=true npm run test:ci
 if [ $? -eq 0 ]; then
   echo -e "${GREEN}✓ Tests passed${NC}"
 else
