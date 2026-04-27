@@ -8,7 +8,8 @@
       "distribution": "internal",
       "channel": "preview",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": "./gradlew assembleRelease -x lint"
       }
     },
     "preview-simulator": {
@@ -21,6 +22,9 @@
       "channel": "production",
       "env": {
         "npm_config_production": "true"
+      },
+      "android": {
+        "gradleCommand": "./gradlew assembleRelease -x lint"
       }
     }
   },
