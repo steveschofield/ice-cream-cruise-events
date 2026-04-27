@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { API_URL } from '../config';
 
 interface Waypoint {
+  id: number;
   lat: number | null;
   lng: number | null;
   name: string;
@@ -34,12 +35,12 @@ function normalizeEvent(rawEvent: any): Event | null {
 
   const waypoints = Array.isArray(rawEvent.waypoints)
     ? rawEvent.waypoints
-        .map((waypoint) => ({
+        .map((waypoint: any) => ({
           ...waypoint,
           lat: toCoordinateValue(waypoint.lat),
           lng: toCoordinateValue(waypoint.lng),
         }))
-        .filter((waypoint) => waypoint.lat !== null && waypoint.lng !== null)
+        .filter((waypoint: any) => waypoint.lat !== null && waypoint.lng !== null)
     : [];
 
   return {
