@@ -172,13 +172,13 @@ function buildMapDocument(event: Event | null): string | null {
         const isEnd = index === routeData.waypoints.length - 1;
         const color = isStart ? colors.start : isEnd ? colors.end : colors.middle;
 
-        L.circleMarker([waypoint.lat, waypoint.lng], {
-          radius: 8,
-          color,
-          fillColor: color,
-          fillOpacity: 1,
-          weight: 2,
-        })
+        const markerIcon = L.divIcon({
+          html: '<div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background-color: ' + color + '; border-radius: 50%; font-weight: bold; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">' + waypoint.order + '</div>',
+          iconSize: [32, 32],
+          className: 'custom-marker'
+        });
+
+        L.marker([waypoint.lat, waypoint.lng], { icon: markerIcon })
           .addTo(map)
           .bindPopup('<strong>' + escapeHtml(waypoint.order + '. ' + waypoint.name) + '</strong>');
       });
