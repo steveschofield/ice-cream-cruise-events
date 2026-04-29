@@ -49,45 +49,32 @@ function normalizeEvent(rawEvent: any): Event | null {
   };
 }
 
-function buildMapsUrl(event: Event | null): string | null {
+function buildMapsUrls(event: Event | null): { apple: string | null; google: string | null } {
   if (!event || event.waypoints.length === 0) {
-    return null;
+    return { apple: null, google: null };
   }
 
-  // Detect if on iOS (Safari or Chrome)
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   if (event.waypoints.length === 1) {
     const waypoint = event.waypoints[0];
-    if (isIOS) {
-      // Use Google Maps iOS app deep link
-      return `comgooglemaps://?q=${waypoint.lat},${waypoint.lng}`;
-    }
-    return `https://www.google.com/maps/search/?api=1&query=${waypoint.lat},${waypoint.lng}`;
+    const googleUrl = isIOS
+      ? `comgooglemaps://?q=${waypoint.lat},${waypoint.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${waypoint.lat},${waypoint.lng}`;
+    const appleUrl = `maps://?q=${waypoint.lat},${waypoint.lng}`;
+    return { apple: appleUrl, google: googleUrl };
   }
 
   const [origin, ...rest] = event.waypoints;
   const destination = rest[rest.length - 1];
 
-  if (isIOS) {
-    // Use Google Maps iOS app deep link for directions
-    // Format: comgooglemaps://?saddr=LAT,LNG&daddr=LAT,LNG&directionsmode=driving
-    return `comgooglemaps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}&directionsmode=driving`;
-  }
+  const googleUrl = isIOS
+    ? `comgooglemaps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}&directionsmode=driving`
+    : `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`;
 
-  const middleWaypoints = rest.slice(0, -1).map((waypoint: Waypoint) => `${waypoint.lat},${waypoint.lng}`);
-  const params = new URLSearchParams({
-    api: '1',
-    origin: `${origin.lat},${origin.lng}`,
-    destination: `${destination.lat},${destination.lng}`,
-    travelmode: 'driving',
-  });
+  const appleUrl = `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`;
 
-  if (middleWaypoints.length > 0) {
-    params.set('waypoints', middleWaypoints.join('|'));
-  }
-
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+  return { apple: appleUrl, google: googleUrl };
 }
 
 function buildMapDocument(event: Event | null): string | null {
@@ -233,7 +220,7 @@ export default function ModalScreen() {
     );
   }
 
-  const mapsUrl = buildMapsUrl(event);
+  const mapsUrls = buildMapsUrls(event);
   const mapDocument = buildMapDocument(event);
 
   return (
@@ -255,9 +242,14 @@ export default function ModalScreen() {
       </View>
 
       <View style={styles.footer}>
-        {mapsUrl && (
-          <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(mapsUrl)}>
-            <Text style={styles.buttonText}>Open Route in Google Maps</Text>
+        {mapsUrls.google && (
+          <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(mapsUrls.google!)}>
+            <Text style={styles.buttonText}>Google Maps</Text>
+          </TouchableOpacity>
+        )}
+        {mapsUrls.apple && (
+          <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={() => Linking.openURL(mapsUrls.apple!)}>
+            <Text style={styles.buttonText}>Apple Maps</Text>
           </TouchableOpacity>
         )}
         <Link href="/" dismissTo asChild>
@@ -334,6 +326,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 6,
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  buttonSecondary: {
+    backgroundColor: '#555555',
   },
   buttonText: {
     color: 'white',
