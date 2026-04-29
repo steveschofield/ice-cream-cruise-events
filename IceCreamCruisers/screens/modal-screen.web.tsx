@@ -54,13 +54,29 @@ function buildMapsUrl(event: Event | null): string | null {
     return null;
   }
 
+  // Detect if on iOS (Safari or Chrome)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   if (event.waypoints.length === 1) {
     const waypoint = event.waypoints[0];
+    if (isIOS) {
+      // Use Apple Maps deep link for iOS
+      return `maps://?q=${waypoint.lat},${waypoint.lng}`;
+    }
     return `https://www.google.com/maps/search/?api=1&query=${waypoint.lat},${waypoint.lng}`;
   }
 
   const [origin, ...rest] = event.waypoints;
   const destination = rest[rest.length - 1];
+  const originName = encodeURIComponent(origin.name);
+  const destName = encodeURIComponent(destination.name);
+
+  if (isIOS) {
+    // Use Apple Maps deep link for directions on iOS
+    // Format: maps://?saddr=SOURCE&daddr=DESTINATION
+    return `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`;
+  }
+
   const middleWaypoints = rest.slice(0, -1).map((waypoint: Waypoint) => `${waypoint.lat},${waypoint.lng}`);
   const params = new URLSearchParams({
     api: '1',
@@ -226,11 +242,6 @@ export default function ModalScreen() {
     <View style={styles.container}>
       <View style={styles.headerCard}>
         <Text style={styles.title}>{event.name}</Text>
-        <Text style={styles.dateTime}>{event.date}</Text>
-        <Text style={styles.timeInfo}>Event Start: {event.eventTime}</Text>
-        <Text style={styles.timeInfo}>Cruise Start: {event.cruiseStartTime}</Text>
-        <Text style={styles.meetingPoint}>Meeting Point: {event.meetingPoint}</Text>
-        <Text style={styles.description}>{event.description}</Text>
       </View>
 
       <View style={styles.mapCard}>
