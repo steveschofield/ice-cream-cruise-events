@@ -60,21 +60,19 @@ function buildMapsUrl(event: Event | null): string | null {
   if (event.waypoints.length === 1) {
     const waypoint = event.waypoints[0];
     if (isIOS) {
-      // Use Apple Maps deep link for iOS
-      return `maps://?q=${waypoint.lat},${waypoint.lng}`;
+      // Use Google Maps iOS app deep link
+      return `comgooglemaps://?q=${waypoint.lat},${waypoint.lng}`;
     }
     return `https://www.google.com/maps/search/?api=1&query=${waypoint.lat},${waypoint.lng}`;
   }
 
   const [origin, ...rest] = event.waypoints;
   const destination = rest[rest.length - 1];
-  const originName = encodeURIComponent(origin.name);
-  const destName = encodeURIComponent(destination.name);
 
   if (isIOS) {
-    // Use Apple Maps deep link for directions on iOS
-    // Format: maps://?saddr=SOURCE&daddr=DESTINATION
-    return `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`;
+    // Use Google Maps iOS app deep link for directions
+    // Format: comgooglemaps://?saddr=LAT,LNG&daddr=LAT,LNG&directionsmode=driving
+    return `comgooglemaps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}&directionsmode=driving`;
   }
 
   const middleWaypoints = rest.slice(0, -1).map((waypoint: Waypoint) => `${waypoint.lat},${waypoint.lng}`);
