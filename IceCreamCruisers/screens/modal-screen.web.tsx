@@ -224,42 +224,33 @@ export default function ModalScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.detailsContainer}>
+      <View style={styles.headerCard}>
         <Text style={styles.title}>{event.name}</Text>
         <Text style={styles.dateTime}>{event.date}</Text>
         <Text style={styles.timeInfo}>Event Start: {event.eventTime}</Text>
         <Text style={styles.timeInfo}>Cruise Start: {event.cruiseStartTime}</Text>
         <Text style={styles.meetingPoint}>Meeting Point: {event.meetingPoint}</Text>
         <Text style={styles.description}>{event.description}</Text>
+      </View>
 
-        <Text style={styles.sectionTitle}>Route Map</Text>
-        <View style={styles.mapCard}>
-          {mapDocument && (
-            <iframe
-              title={`${event.name} route map`}
-              srcDoc={mapDocument}
-              style={iframeStyle}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          )}
-        </View>
+      <View style={styles.mapCard}>
+        {mapDocument && (
+          <iframe
+            title={`${event.name} route map`}
+            srcDoc={mapDocument}
+            style={iframeStyle}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        )}
+      </View>
 
+      <View style={styles.footer}>
         {mapsUrl && (
           <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(mapsUrl)}>
             <Text style={styles.buttonText}>Open Route in Google Maps</Text>
           </TouchableOpacity>
         )}
-
-        <Text style={styles.waypointsTitle}>Route Waypoints</Text>
-        {event.waypoints && event.waypoints.map((wp) => (
-          <Text key={wp.id} style={styles.waypointItem}>
-            {wp.order}. {wp.name} ({wp.lat.toFixed(4)}, {wp.lng.toFixed(4)})
-          </Text>
-        ))}
-      </ScrollView>
-
-      <View style={styles.footer}>
         <Link href="/" dismissTo asChild>
           <TouchableOpacity style={styles.closeButton}>
             <Text style={styles.closeButtonText}>Close</Text>
@@ -280,68 +271,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    flexDirection: 'column',
   },
-  detailsContainer: {
+  headerCard: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
   },
   dateTime: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   timeInfo: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   meetingPoint: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#007AFF',
-    marginBottom: 8,
+    marginBottom: 4,
+    marginTop: 4,
   },
   description: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: 0,
+    marginTop: 4,
   },
   mapCard: {
-    height: 360,
-    borderRadius: 12,
+    flex: 1,
+    borderRadius: 0,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#d9e2ec',
+    borderWidth: 0,
     backgroundColor: '#eef3f8',
-    marginBottom: 16,
-  },
-  waypointsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  waypointItem: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
-    paddingLeft: 8,
   },
   footer: {
-    padding: 16,
+    padding: 12,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    gap: 8,
   },
   button: {
     backgroundColor: '#007AFF',
@@ -355,7 +332,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   closeButton: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   closeButtonText: {

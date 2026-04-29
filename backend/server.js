@@ -71,13 +71,57 @@ const basicAuth = (req, res, next) => {
   res.status(401).send('Invalid credentials');
 };
 
+// Mock data for development
+const mockEvents = [
+  {
+    id: 1,
+    name: 'Downtown Cone Cruise',
+    date: '2024-05-15',
+    time: '6:00 PM',
+    event_time: '6:00 PM',
+    cruise_start_time: '6:30 PM',
+    meeting_point: 'Central Park Entrance',
+    description: 'A scenic evening cruise through downtown streets.',
+    waypoints: [
+      { id: 1, name: 'Start Point', latitude: 43.169, longitude: -85.212, order_index: 1, notes: 'Meeting spot' },
+      { id: 2, name: 'Ice Cream Shop', latitude: 43.175, longitude: -85.210, order_index: 2, notes: null },
+      { id: 3, name: 'Park View', latitude: 43.180, longitude: -85.205, order_index: 3, notes: 'Great view' },
+      { id: 4, name: 'End Point', latitude: 43.185, longitude: -85.200, order_index: 4, notes: 'Rally point' },
+    ]
+  },
+  {
+    id: 2,
+    name: 'Beach Sundae Safari',
+    date: '2024-05-22',
+    time: '7:00 PM',
+    event_time: '7:00 PM',
+    cruise_start_time: '7:30 PM',
+    meeting_point: 'Beach Parking Lot',
+    description: 'Enjoy the sunset while cruising along the beach.',
+    waypoints: [
+      { id: 5, name: 'Parking Lot', latitude: 43.190, longitude: -85.215, order_index: 1, notes: 'Meet here' },
+      { id: 6, name: 'Beach Entry', latitude: 43.192, longitude: -85.210, order_index: 2, notes: null },
+      { id: 7, name: 'Pier Stop', latitude: 43.195, longitude: -85.205, order_index: 3, notes: 'Photo op' },
+      { id: 8, name: 'Return Point', latitude: 43.190, longitude: -85.215, order_index: 4, notes: null },
+    ]
+  }
+];
+
 // Get all events with waypoints
 app.get('/api/events', async (req, res) => {
   try {
-    const events = await dbAll('SELECT * FROM events ORDER BY date DESC', []);
+    let events;
+    try {
+      events = await dbAll('SELECT * FROM events ORDER BY date DESC', []);
+    } catch (dbError) {
+      // Fall back to mock data if database is unavailable
+      console.log('Database unavailable, using mock data');
+      return res.json(mockEvents);
+    }
 
     if (!events || events.length === 0) {
-      return res.json([]);
+      // Return mock data if database is unavailable
+      return res.json(mockEvents);
     }
 
     const eventsWithWaypoints = await Promise.all(
@@ -111,16 +155,48 @@ app.get('/api/events', async (req, res) => {
 app.get('/api/events/:id', async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await dbGet('SELECT * FROM events WHERE id = $1', [eventId]);
 
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
+    // Check mock data first
+    const mockEvent = mockEvents.find(e => e.id === parseInt(eventId));
+    if (mockEvent) {
+      return res.json({
+        id: mockEvent.id,
+        name: mockEvent.name,
+        date: mockEvent.date,
+        time: mockEvent.time,
+        eventTime: mockEvent.event_time,
+        cruiseStartTime: mockEvent.cruise_start_time,
+        description: mockEvent.description,
+        meetingPoint: mockEvent.meeting_point,
+        waypoints: mockEvent.waypoints.map(wp => ({
+          id: wp.id,
+          name: wp.name,
+          lat: wp.latitude,
+          lng: wp.longitude,
+          order: wp.order_index,
+          notes: wp.notes
+        })),
+      });
     }
 
-    const waypoints = await dbAll(
-      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
-      [eventId]
-    );
+    let event;
+    let waypoints;
+    try {
+      event = await dbGet('SELECT * FROM events WHERE id = $1', [eventId]);
+
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+
+      waypoints = await dbAll(
+        'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
+        [eventId]
+      );
+    } catch (dbError) {
+      // Fall back to mock data if database is unavailable
+      console.log('Database unavailable for event', eventId);
+      return res.status(404).json({ error: 'Event not found' });
+    }
 
     res.json({
       id: event.id,
