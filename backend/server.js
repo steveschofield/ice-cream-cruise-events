@@ -107,6 +107,28 @@ const mockEvents = [
   }
 ];
 
+// Format mock events to match API response format
+function formatMockEvents(events) {
+  return events.map(event => ({
+    id: event.id,
+    name: event.name,
+    date: event.date,
+    time: event.time,
+    eventTime: event.event_time,
+    cruiseStartTime: event.cruise_start_time,
+    description: event.description,
+    meetingPoint: event.meeting_point,
+    waypoints: event.waypoints.map(wp => ({
+      id: wp.id,
+      name: wp.name,
+      lat: wp.latitude,
+      lng: wp.longitude,
+      order: wp.order_index,
+      notes: wp.notes
+    }))
+  }));
+}
+
 // Get all events with waypoints
 app.get('/api/events', async (req, res) => {
   try {
@@ -116,12 +138,12 @@ app.get('/api/events', async (req, res) => {
     } catch (dbError) {
       // Fall back to mock data if database is unavailable
       console.log('Database unavailable, using mock data');
-      return res.json(mockEvents);
+      return res.json(formatMockEvents(mockEvents));
     }
 
     if (!events || events.length === 0) {
       // Return mock data if database is unavailable
-      return res.json(mockEvents);
+      return res.json(formatMockEvents(mockEvents));
     }
 
     const eventsWithWaypoints = await Promise.all(
