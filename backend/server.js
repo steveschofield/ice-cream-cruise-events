@@ -308,33 +308,20 @@ function buildMapsUrls(waypoints) {
 
   if (waypoints.length === 1) {
     const wp = waypoints[0];
-    return {
-      google: `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}&dir_action=navigate`,
-      apple: `maps://?q=${wp.lat},${wp.lng}`
-    };
+    return `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
   }
 
   const [origin, ...rest] = waypoints;
   const destination = rest[rest.length - 1];
   const middleWaypoints = rest.slice(0, -1);
 
-  let googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving&dir_action=navigate`;
+  let googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`;
   if (middleWaypoints.length > 0) {
     const waypointParams = middleWaypoints.map(wp => `${wp.lat},${wp.lng}`).join('|');
     googleUrl += `&waypoints=${waypointParams}`;
   }
 
-  // Apple Maps web URL that supports waypoints with directions
-  let appleUrl = `https://maps.apple.com/?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}&dirflg=d&dir_action=navigate`;
-  if (middleWaypoints.length > 0) {
-    const appleWaypoints = middleWaypoints.map(wp => `${wp.lat},${wp.lng}`).join('&');
-    appleUrl += `&${appleWaypoints}`;
-  }
-
-  return {
-    google: googleUrl,
-    apple: appleUrl
-  };
+  return googleUrl;
 }
 
 function buildMapDocument(event) {

@@ -49,32 +49,38 @@ function normalizeEvent(rawEvent: any): Event | null {
   };
 }
 
-function buildMapsUrls(event: Event | null): { apple: string | null; google: string | null } {
+function buildMapsUrl(event: Event | null): string | null {
   if (!event || event.waypoints.length === 0) {
-    return { apple: null, google: null };
+    return null;
   }
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   if (event.waypoints.length === 1) {
     const waypoint = event.waypoints[0];
-    const googleUrl = isIOS
+    return isIOS
       ? `comgooglemaps://?q=${waypoint.lat},${waypoint.lng}`
       : `https://www.google.com/maps/search/?api=1&query=${waypoint.lat},${waypoint.lng}`;
-    const appleUrl = `maps://?q=${waypoint.lat},${waypoint.lng}`;
-    return { apple: appleUrl, google: googleUrl };
   }
 
   const [origin, ...rest] = event.waypoints;
   const destination = rest[rest.length - 1];
+  const middleWaypoints = rest.slice(0, -1);
 
-  const googleUrl = isIOS
+  let googleUrl = isIOS
     ? `comgooglemaps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}&directionsmode=driving`
     : `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`;
 
-  const appleUrl = `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`;
+  if (middleWaypoints.length > 0) {
+    const waypointParams = middleWaypoints.map(wp => `${wp.lat},${wp.lng}`).join('|');
+    if (isIOS) {
+      googleUrl += `&waypoints=${waypointParams}`;
+    } else {
+      googleUrl += `&waypoints=${waypointParams}`;
+    }
+  }
 
-  return { apple: appleUrl, google: googleUrl };
+  return googleUrl;
 }
 
 function buildMapDocument(event: Event | null): string | null {
@@ -220,7 +226,7 @@ export default function ModalScreen() {
     );
   }
 
-  const mapsUrls = buildMapsUrls(event);
+  const mapsUrl = buildMapsUrl(event);
   const mapDocument = buildMapDocument(event);
 
   return (
@@ -242,14 +248,9 @@ export default function ModalScreen() {
       </View>
 
       <View style={styles.footer}>
-        {mapsUrls.google && (
-          <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(mapsUrls.google!)}>
+        {mapsUrl && (
+          <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(mapsUrl)}>
             <Text style={styles.buttonText}>Google Maps</Text>
-          </TouchableOpacity>
-        )}
-        {mapsUrls.apple && (
-          <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={() => Linking.openURL(mapsUrls.apple!)}>
-            <Text style={styles.buttonText}>Apple Maps</Text>
           </TouchableOpacity>
         )}
         <Link href="/" dismissTo asChild>
@@ -327,9 +328,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     marginBottom: 8,
-  },
-  buttonSecondary: {
-    backgroundColor: '#555555',
   },
   buttonText: {
     color: 'white',
