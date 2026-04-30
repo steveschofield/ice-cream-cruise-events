@@ -301,6 +301,27 @@ function escapeHtml(text) {
 }
 
 // Build map HTML document
+function buildMapsUrls(waypoints) {
+  if (!waypoints || waypoints.length === 0) {
+    return { google: null, apple: null };
+  }
+
+  if (waypoints.length === 1) {
+    const wp = waypoints[0];
+    return {
+      google: `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`,
+      apple: `maps://?q=${wp.lat},${wp.lng}`
+    };
+  }
+
+  const [origin, ...rest] = waypoints;
+  const destination = rest[rest.length - 1];
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`,
+    apple: `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`
+  };
+}
+
 function buildMapDocument(event) {
   const waypointsArray = Array.isArray(event.waypoints) ? event.waypoints : [];
   const routeDataObj = {
@@ -313,6 +334,7 @@ function buildMapDocument(event) {
     })),
   };
 
+  const mapsUrls = buildMapsUrls(waypointsArray);
   const routeDataJson = JSON.stringify(routeDataObj).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
@@ -342,14 +364,44 @@ function buildMapDocument(event) {
         background: white;
         font-size: 14px;
         line-height: 1.5;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
       .info-panel h2 {
-        margin: 0 0 8px 0;
+        margin: 0;
         font-size: 18px;
       }
       .info-panel p {
-        margin: 4px 0;
+        margin: 4px 0 0 0;
         color: #666;
+      }
+      .button-group {
+        display: flex;
+        gap: 8px;
+      }
+      .map-button {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+      }
+      .map-button-google {
+        background-color: #007AFF;
+        color: white;
+      }
+      .map-button-apple {
+        background-color: #555555;
+        color: white;
+      }
+      .map-button:hover {
+        opacity: 0.9;
       }
     </style>
   </head>
@@ -357,8 +409,14 @@ function buildMapDocument(event) {
     <div style="display: flex; flex-direction: column; height: 100vh;">
       <div id="map" style="flex: 1;"></div>
       <div class="info-panel">
-        <h2>${escapeHtml(routeDataObj.name)}</h2>
-        <p><strong>Waypoints:</strong> ${escapeHtml(String(routeDataObj.waypoints.length))}</p>
+        <div>
+          <h2>${escapeHtml(routeDataObj.name)}</h2>
+          <p><strong>Waypoints:</strong> ${escapeHtml(String(routeDataObj.waypoints.length))}</p>
+        </div>
+        ${mapsUrls.google ? `<div class="button-group">
+          <a href="${escapeHtml(mapsUrls.google)}" class="map-button map-button-google">Google Maps</a>
+          <a href="${escapeHtml(mapsUrls.apple)}" class="map-button map-button-apple">Apple Maps</a>
+        </div>` : ''}
       </div>
     </div>
     <script
