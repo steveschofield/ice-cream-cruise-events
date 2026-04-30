@@ -316,8 +316,16 @@ function buildMapsUrls(waypoints) {
 
   const [origin, ...rest] = waypoints;
   const destination = rest[rest.length - 1];
+  const middleWaypoints = rest.slice(0, -1);
+
+  let googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`;
+  if (middleWaypoints.length > 0) {
+    const waypointParams = middleWaypoints.map(wp => `${wp.lat},${wp.lng}`).join('|');
+    googleUrl += `&waypoints=${waypointParams}`;
+  }
+
   return {
-    google: `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`,
+    google: googleUrl,
     apple: `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`
   };
 }
