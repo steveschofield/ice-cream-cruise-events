@@ -300,10 +300,10 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (char) => map[char]);
 }
 
-// Build map HTML document
-function buildMapsUrls(waypoints) {
+// Build Google Maps URL for navigation
+function buildMapsUrl(waypoints) {
   if (!waypoints || waypoints.length === 0) {
-    return { google: null, apple: null };
+    return null;
   }
 
   if (waypoints.length === 1) {
@@ -336,7 +336,6 @@ function buildMapDocument(event) {
     })),
   };
 
-  const mapsUrls = buildMapsUrls(waypointsArray);
   const routeDataJson = JSON.stringify(routeDataObj).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
