@@ -324,9 +324,16 @@ function buildMapsUrls(waypoints) {
     googleUrl += `&waypoints=${waypointParams}`;
   }
 
+  // Apple Maps web URL that supports waypoints
+  let appleUrl = `https://maps.apple.com/?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}&dirflg=d`;
+  if (middleWaypoints.length > 0) {
+    const appleWaypoints = middleWaypoints.map(wp => `${wp.lat},${wp.lng}`).join('&');
+    appleUrl += `&${appleWaypoints}`;
+  }
+
   return {
     google: googleUrl,
-    apple: `maps://?saddr=${origin.lat},${origin.lng}&daddr=${destination.lat},${destination.lng}`
+    apple: appleUrl
   };
 }
 
