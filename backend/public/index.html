@@ -1,133 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ice Cream Cruisers</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .container {
-      text-align: center;
-      background: white;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      max-width: 400px;
-    }
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
-    }
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-    }
-    #qrcode {
-      margin: 24px 0 16px;
-      display: flex;
-      justify-content: center;
-    }
-    .note {
-      font-size: 13px;
-      color: #777;
-      line-height: 1.5;
-      margin-bottom: 24px;
-    }
-    .instructions {
-      text-align: left;
-      background: #f5f5f5;
+      min-height: 100vh;
       padding: 20px;
-      border-radius: 8px;
-      margin-top: 30px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .event-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .event-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .event-card h3 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .event-card .event-detail {
       font-size: 14px;
       color: #666;
-      line-height: 1.6;
-    }
-    .instructions ol {
-      margin: 0;
-      padding-left: 20px;
-    }
-    .instructions li {
-      margin-bottom: 10px;
-    }
-    .actions {
+      margin: 4px 0;
       display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 20px;
+      align-items: center;
+      gap: 8px;
     }
-    .primary-link,
-    .admin-link {
-      padding: 10px;
-      background: #f0f0f0;
-      border-radius: 6px;
-      text-decoration: none;
-      color: #667eea;
-      font-weight: 600;
+
+    .event-card .event-detail strong {
+      color: #333;
+    }
+
+    .event-detail-label {
+      color: #999;
+      min-width: 80px;
+    }
+
+    .waypoint-count {
       display: inline-block;
-    }
-    .primary-link {
-      background: #667eea;
+      background: #007AFF;
       color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
     }
-    .primary-link:hover {
-      background: #5a6fd6;
+
+    .loading {
+      text-align: center;
+      color: white;
+      font-size: 16px;
     }
-    .admin-link:hover {
-      background: #e0e0e0;
+
+    .error {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .empty {
+      background: white;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      color: #666;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🍦 Ice Cream Cruisers</h1>
-    <p class="subtitle">Scan to open the web app on your phone</p>
+    <header>
+      <h1>🍦 Ice Cream Cruisers</h1>
+      <p>Upcoming Events</p>
+    </header>
 
-    <div id="qrcode"></div>
-    <p class="note">
-      This page no longer points at Expo Go. Expo Go is for local development with
-      <code>npx expo start</code>; native install testing should use EAS preview builds instead.
-    </p>
-
-    <div class="instructions">
-      <strong>How to get started:</strong>
-      <ol>
-        <li>Scan the QR code above with your phone camera.</li>
-        <li>The web version will open immediately in your browser.</li>
-        <li>For a native Android or iPhone build, install a shared EAS preview build.</li>
-        <li>For local development, run <code>npx expo start</code> and scan that QR in Expo Go.</li>
-      </ol>
-    </div>
-
-    <div class="actions">
-      <a href="/" class="primary-link">Open Web App</a>
-      <a href="/admin" class="admin-link">Go to Admin Panel</a>
-    </div>
+    <div id="content" class="loading">Loading events...</div>
   </div>
 
   <script>
-    const webAppURL = `${window.location.origin}/`;
+    async function loadEvents() {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) throw new Error('Failed to load events');
 
-    new QRCode(document.getElementById('qrcode'), {
-      text: webAppURL,
-      width: 250,
-      height: 250,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.H
-    });
+        const events = await response.json();
+        const contentDiv = document.getElementById('content');
 
-    document.write('<p style="font-size:12px;color:#999;margin-top:20px;">URL: ' + webAppURL + '</p>');
+        if (!events || events.length === 0) {
+          contentDiv.innerHTML = '<div class="empty">No events scheduled yet</div>';
+          return;
+        }
+
+        contentDiv.innerHTML = '<div class="events-list">' +
+          events.map(event => `
+            <a href="/modal?eventId=${event.id}" class="event-card">
+              <h3>${escapeHtml(event.name)}</h3>
+              <div class="event-detail">
+                <span class="event-detail-label">📅 Date:</span>
+                <span>${escapeHtml(event.date)}</span>
+              </div>
+              <div class="event-detail">
+                <span class="event-detail-label">🕐 Start:</span>
+                <span>${escapeHtml(event.eventTime || 'TBD')}</span>
+              </div>
+              <div class="event-detail">
+                <span class="event-detail-label">📍 Meeting:</span>
+                <span>${escapeHtml(event.meetingPoint)}</span>
+              </div>
+              <div class="event-detail">
+                <span class="event-detail-label">📝 Route:</span>
+                <span class="waypoint-count">${event.waypoints ? event.waypoints.length : 0} waypoints</span>
+              </div>
+            </a>
+          `).join('') + '</div>';
+      } catch (error) {
+        console.error('Error loading events:', error);
+        document.getElementById('content').innerHTML =
+          '<div class="error">Failed to load events. Please try again.</div>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    loadEvents();
   </script>
 </body>
 </html>
