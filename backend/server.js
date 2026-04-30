@@ -336,6 +336,7 @@ function buildMapDocument(event) {
     })),
   };
 
+  const mapsUrl = buildMapsUrl(waypointsArray);
   const routeDataJson = JSON.stringify(routeDataObj).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
@@ -397,10 +398,6 @@ function buildMapDocument(event) {
         background-color: #007AFF;
         color: white;
       }
-      .map-button-apple {
-        background-color: #555555;
-        color: white;
-      }
       .map-button:hover {
         opacity: 0.9;
       }
@@ -414,9 +411,8 @@ function buildMapDocument(event) {
           <h2>${escapeHtml(routeDataObj.name)}</h2>
           <p><strong>Waypoints:</strong> ${escapeHtml(String(routeDataObj.waypoints.length))}</p>
         </div>
-        ${mapsUrls.google ? `<div class="button-group">
-          <a href="${escapeHtml(mapsUrls.google)}" class="map-button map-button-google">Google Maps</a>
-          <a href="${escapeHtml(mapsUrls.apple)}" class="map-button map-button-apple">Apple Maps</a>
+        ${mapsUrl ? `<div class="button-group">
+          <a href="${escapeHtml(mapsUrl)}" class="map-button map-button-google">Google Maps</a>
         </div>` : ''}
       </div>
     </div>
