@@ -503,15 +503,41 @@ app.get('/modal', async (req, res) => {
       return res.status(400).send('<html><body><h1>Missing eventId parameter</h1></body></html>');
     }
 
-    const event = await dbGet('SELECT * FROM events WHERE id = $1', [eventId]);
-    if (!event) {
-      return res.status(404).send('<html><body><h1>Event not found</h1></body></html>');
+    // Check mock data first
+    const mockEvent = mockEvents.find(e => e.id === parseInt(eventId));
+    if (mockEvent) {
+      const eventWithWaypoints = {
+        name: mockEvent.name,
+        waypoints: mockEvent.waypoints.map(wp => ({
+          id: wp.id,
+          name: wp.name,
+          lat: wp.latitude,
+          lng: wp.longitude,
+          order: wp.order_index,
+          notes: wp.notes
+        }))
+      };
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(buildMapDocument(eventWithWaypoints));
     }
 
-    const waypoints = await dbAll(
-      'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
-      [eventId]
-    );
+    // Try database
+    let event;
+    let waypoints;
+    try {
+      event = await dbGet('SELECT * FROM events WHERE id = $1', [eventId]);
+      if (!event) {
+        return res.status(404).send('<html><body><h1>Event not found</h1></body></html>');
+      }
+
+      waypoints = await dbAll(
+        'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
+        [eventId]
+      );
+    } catch (dbError) {
+      console.log('Database unavailable for modal, checked mock data');
+      return res.status(404).send('<html><body><h1>Event not found</h1></body></html>');
+    }
 
     const eventWithWaypoints = {
       ...event,
