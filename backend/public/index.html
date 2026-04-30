@@ -96,6 +96,22 @@
       margin-top: 8px;
     }
 
+    .view-route-btn {
+      display: inline-block;
+      background: #007AFF;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 12px;
+      text-decoration: none;
+    }
+
+    .event-card:hover .view-route-btn {
+      background: #0056b3;
+    }
+
     .loading {
       text-align: center;
       color: white;
@@ -145,7 +161,7 @@
 
         contentDiv.innerHTML = '<div class="events-list">' +
           events.map(event => `
-            <a href="/modal?eventId=${event.id}" class="event-card">
+            <div class="event-card">
               <h3>${escapeHtml(event.name)}</h3>
               <div class="event-detail">
                 <span class="event-detail-label">📅 Date:</span>
@@ -167,7 +183,8 @@
                 <span class="event-detail-label">📝 Route:</span>
                 <span class="waypoint-count">${event.waypoints ? event.waypoints.length : 0} waypoints</span>
               </div>
-            </a>
+              <a href="/modal?eventId=${event.id}" class="view-route-btn">View Route Map</a>
+            </div>
           `).join('') + '</div>';
       } catch (error) {
         console.error('Error loading events:', error);
