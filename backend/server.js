@@ -543,9 +543,9 @@ app.get(/^\/app(?:\/.*)?$/, (req, res) => {
   res.redirect(302, target.startsWith('?') ? `/${target}` : target);
 });
 
-// Serve web app for the root route.
+// Serve events list for the root route.
 app.get('/', (req, res) => {
-  res.sendFile(path.join(webDir, 'index.html'));
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 // Serve web app for all other routes (client-side routing)

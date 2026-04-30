@@ -152,8 +152,12 @@
                 <span>${escapeHtml(event.date)}</span>
               </div>
               <div class="event-detail">
-                <span class="event-detail-label">🕐 Start:</span>
+                <span class="event-detail-label">🕐 Event:</span>
                 <span>${escapeHtml(event.eventTime || 'TBD')}</span>
+              </div>
+              <div class="event-detail">
+                <span class="event-detail-label">🚗 Cruise:</span>
+                <span>${escapeHtml(event.cruiseStartTime || 'TBD')}</span>
               </div>
               <div class="event-detail">
                 <span class="event-detail-label">📍 Meeting:</span>
