@@ -20,6 +20,7 @@
     "android": {
       "package": "com.steveschofield.icecreamcruisers",
       "versionCode": 2,
+      "privacyPolicy": "https://www.level52.tech/ice-cream-cruise-events/privacy.html",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
