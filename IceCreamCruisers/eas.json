@@ -24,7 +24,7 @@
         "npm_config_production": "true"
       },
       "android": {
-        "gradleCommand": "assembleRelease -x lint"
+        "gradleCommand": "bundleRelease -x lint"
       }
     }
   },
@@ -34,6 +34,9 @@
         "appleId": "steve.schofield@gmail.com",
         "appleTeamId": "S9BA8TPMCF",
         "ascAppId": "6763822249"
+      },
+      "android": {
+        "releaseStatus": "draft"
       }
     }
   }
