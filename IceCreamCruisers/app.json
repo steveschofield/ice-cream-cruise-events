@@ -10,11 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.steveschofield.icecreamcruisers",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "MKDirectionsApplicationSupportedModes": ["MKDirectionsModeCar"]
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
