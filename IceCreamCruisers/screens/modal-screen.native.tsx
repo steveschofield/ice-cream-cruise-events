@@ -100,6 +100,16 @@ export default function ModalScreen() {
     };
   }, [locationSubscription]);
 
+  useEffect(() => {
+    if (event && event.waypoints.length > 1 && mapRef.current) {
+      const coords = event.waypoints.map(wp => ({ latitude: wp.lat, longitude: wp.lng }));
+      mapRef.current.fitToCoordinates(coords, {
+        edgePadding: { top: 60, right: 60, bottom: 60, left: 60 },
+        animated: false,
+      });
+    }
+  }, [event]);
+
 
   const startCruise = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
