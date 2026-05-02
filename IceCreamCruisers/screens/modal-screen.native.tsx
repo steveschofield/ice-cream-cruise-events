@@ -100,17 +100,6 @@ export default function ModalScreen() {
     };
   }, [locationSubscription]);
 
-  useEffect(() => {
-    if (event && event.waypoints.length > 0 && mapRef.current) {
-      console.log('Animating to waypoint:', event.waypoints[0]);
-      mapRef.current.animateToRegion({
-        latitude: event.waypoints[0].lat,
-        longitude: event.waypoints[0].lng,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
-    }
-  }, [event]);
 
   const startCruise = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -268,8 +257,8 @@ export default function ModalScreen() {
         ref={mapRef}
         style={styles.map}
         initialRegion={{
-          latitude: event.defaultLat ?? 43.169,
-          longitude: event.defaultLng ?? -85.212,
+          latitude: event.waypoints[0]?.lat ?? event.defaultLat ?? 43.169,
+          longitude: event.waypoints[0]?.lng ?? event.defaultLng ?? -85.212,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
