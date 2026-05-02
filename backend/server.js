@@ -71,6 +71,18 @@ const basicAuth = (req, res, next) => {
   res.status(401).send('Invalid credentials');
 };
 
+function formatTime(time) {
+  if (!time) return time;
+  if (/am|pm/i.test(time)) return time;
+  const match = time.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return time;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${period}`;
+}
+
 // Mock data for development
 const mockEvents = [
   {
@@ -157,9 +169,9 @@ app.get('/api/events', async (req, res) => {
           id: event.id,
           name: event.name,
           date: event.date,
-          time: event.time,
-          eventTime: event.event_time,
-          cruiseStartTime: event.cruise_start_time,
+          time: formatTime(event.time),
+          eventTime: formatTime(event.event_time),
+          cruiseStartTime: formatTime(event.cruise_start_time),
           description: event.description,
           meetingPoint: event.meeting_point,
           waypoints: waypoints || [],
@@ -224,9 +236,9 @@ app.get('/api/events/:id', async (req, res) => {
       id: event.id,
       name: event.name,
       date: event.date,
-      time: event.time,
-      eventTime: event.event_time,
-      cruiseStartTime: event.cruise_start_time,
+      time: formatTime(event.time),
+      eventTime: formatTime(event.event_time),
+      cruiseStartTime: formatTime(event.cruise_start_time),
       description: event.description,
       meetingPoint: event.meeting_point,
       waypoints: waypoints || [],
@@ -265,9 +277,9 @@ app.post('/api/events', basicAuth, async (req, res) => {
       id: eventId,
       name,
       date,
-      time: eventTime,
-      eventTime,
-      cruiseStartTime,
+      time: formatTime(eventTime),
+      eventTime: formatTime(eventTime),
+      cruiseStartTime: formatTime(cruiseStartTime),
       description,
       meetingPoint,
       waypoints,
