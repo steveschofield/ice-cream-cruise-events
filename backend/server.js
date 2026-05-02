@@ -92,6 +92,8 @@ const mockEvents = [
     time: '6:00 PM',
     event_time: '6:00 PM',
     cruise_start_time: '6:30 PM',
+    default_lat: 43.169,
+    default_lng: -85.212,
     meeting_point: 'Central Park Entrance',
     description: 'A scenic evening cruise through downtown streets.',
     waypoints: [
@@ -108,6 +110,8 @@ const mockEvents = [
     time: '7:00 PM',
     event_time: '7:00 PM',
     cruise_start_time: '7:30 PM',
+    default_lat: 43.169,
+    default_lng: -85.212,
     meeting_point: 'Beach Parking Lot',
     description: 'Enjoy the sunset while cruising along the beach.',
     waypoints: [
@@ -128,6 +132,8 @@ function formatMockEvents(events) {
     time: event.time,
     eventTime: event.event_time,
     cruiseStartTime: event.cruise_start_time,
+    defaultLat: event.default_lat ?? null,
+    defaultLng: event.default_lng ?? null,
     description: event.description,
     meetingPoint: event.meeting_point,
     waypoints: event.waypoints.map(wp => ({
@@ -172,6 +178,8 @@ app.get('/api/events', async (req, res) => {
           time: formatTime(event.time),
           eventTime: formatTime(event.event_time),
           cruiseStartTime: formatTime(event.cruise_start_time),
+          defaultLat: event.default_lat ?? null,
+          defaultLng: event.default_lng ?? null,
           description: event.description,
           meetingPoint: event.meeting_point,
           waypoints: waypoints || [],
@@ -239,6 +247,8 @@ app.get('/api/events/:id', async (req, res) => {
       time: formatTime(event.time),
       eventTime: formatTime(event.event_time),
       cruiseStartTime: formatTime(event.cruise_start_time),
+      defaultLat: event.default_lat ?? null,
+      defaultLng: event.default_lng ?? null,
       description: event.description,
       meetingPoint: event.meeting_point,
       waypoints: waypoints || [],
@@ -251,15 +261,15 @@ app.get('/api/events/:id', async (req, res) => {
 // Create event with waypoints
 app.post('/api/events', basicAuth, async (req, res) => {
   try {
-    const { name, date, eventTime, cruiseStartTime, meetingPoint, description, waypoints } = req.body;
+    const { name, date, eventTime, cruiseStartTime, meetingPoint, description, waypoints, defaultLat, defaultLng } = req.body;
 
     if (!name || !date || !eventTime || !cruiseStartTime || !meetingPoint || !waypoints || waypoints.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const result = await pool.query(
-      'INSERT INTO events (name, date, time, event_time, cruise_start_time, meeting_point, description) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [name, date, eventTime, eventTime, cruiseStartTime, meetingPoint, description || '']
+      'INSERT INTO events (name, date, time, event_time, cruise_start_time, meeting_point, description, default_lat, default_lng) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+      [name, date, eventTime, eventTime, cruiseStartTime, meetingPoint, description || '', defaultLat ?? null, defaultLng ?? null]
     );
 
     const eventId = result.rows[0].id;
@@ -280,6 +290,8 @@ app.post('/api/events', basicAuth, async (req, res) => {
       time: formatTime(eventTime),
       eventTime: formatTime(eventTime),
       cruiseStartTime: formatTime(cruiseStartTime),
+      defaultLat: defaultLat ?? null,
+      defaultLng: defaultLng ?? null,
       description,
       meetingPoint,
       waypoints,
@@ -340,6 +352,8 @@ function buildMapDocument(event) {
   const waypointsArray = Array.isArray(event.waypoints) ? event.waypoints : [];
   const routeDataObj = {
     name: event.name || 'Route Map',
+    defaultLat: event.default_lat ?? null,
+    defaultLng: event.default_lng ?? null,
     waypoints: waypointsArray.map((waypoint) => ({
       name: waypoint.name || 'Waypoint',
       lat: parseFloat(waypoint.lat),
@@ -469,7 +483,7 @@ function buildMapDocument(event) {
       const coordinates = (routeData.waypoints || []).map((waypoint) => [waypoint.lat, waypoint.lng]);
 
       if (coordinates.length === 0) {
-        map.setView([43.169, -85.212], 9);
+        map.setView([routeData.defaultLat || 43.169, routeData.defaultLng || -85.212], 9);
       } else if (coordinates.length === 1) {
         map.setView(coordinates[0], 13);
       } else {

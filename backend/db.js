@@ -35,6 +35,14 @@ async function initializeDatabase() {
     await pool.query(`
       ALTER TABLE waypoints ADD COLUMN IF NOT EXISTS notes TEXT
     `);
+
+    await pool.query(`
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS default_lat DOUBLE PRECISION
+    `);
+
+    await pool.query(`
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS default_lng DOUBLE PRECISION
+    `);
   } catch (error) {
     console.error('Error initializing database:', error);
   }

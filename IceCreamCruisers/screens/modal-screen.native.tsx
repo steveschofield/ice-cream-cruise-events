@@ -25,6 +25,8 @@ interface Event {
   meetingPoint: string;
   description: string;
   waypoints: Waypoint[];
+  defaultLat?: number | null;
+  defaultLng?: number | null;
 }
 
 function toCoordinateValue(value: number | string): number | null {
@@ -266,8 +268,8 @@ export default function ModalScreen() {
         ref={mapRef}
         style={styles.map}
         initialRegion={{
-          latitude: 43.169,
-          longitude: -85.212,
+          latitude: event.defaultLat ?? 43.169,
+          longitude: event.defaultLng ?? -85.212,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}

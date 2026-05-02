@@ -321,6 +321,15 @@
               <textarea id="description" placeholder="Optional description">Enjoy Ice Cream and sharing your cool ride with the Greenville community.</textarea>
             </div>
 
+            <div class="form-group">
+              <label>Default Map Location</label>
+              <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                <input type="number" id="defaultLat" placeholder="Latitude" step="any" style="flex: 1;">
+                <input type="number" id="defaultLng" placeholder="Longitude" step="any" style="flex: 1;">
+              </div>
+              <button type="button" id="useMapCenterBtn" class="btn-primary" style="font-size: 12px; padding: 7px;">Use Current Map Center</button>
+            </div>
+
             <button type="button" id="saveEventBtn" class="btn-success">Save Event</button>
           </form>
         </div>
@@ -493,6 +502,12 @@
       map.setView([43.17, -85.21], 13);
     });
 
+    document.getElementById('useMapCenterBtn').addEventListener('click', () => {
+      const center = map.getCenter();
+      document.getElementById('defaultLat').value = center.lat.toFixed(6);
+      document.getElementById('defaultLng').value = center.lng.toFixed(6);
+    });
+
     document.getElementById('saveEventBtn').addEventListener('click', async () => {
       const eventName = document.getElementById('eventName').value;
       const dateInput = document.getElementById('eventDate').value;
@@ -504,6 +519,10 @@
       const cruiseStartTime = document.getElementById('cruiseStartTime').value;
       const meetingPoint = document.getElementById('meetingPoint').value;
       const description = document.getElementById('description').value;
+      const defaultLatVal = document.getElementById('defaultLat').value;
+      const defaultLngVal = document.getElementById('defaultLng').value;
+      const defaultLat = defaultLatVal !== '' ? parseFloat(defaultLatVal) : null;
+      const defaultLng = defaultLngVal !== '' ? parseFloat(defaultLngVal) : null;
 
       if (!eventName || !eventDate || !eventTime || !cruiseStartTime || !meetingPoint) {
         alert('Please fill in all required fields');
@@ -533,6 +552,8 @@
             meetingPoint: meetingPoint,
             description: description,
             waypoints: waypoints,
+            defaultLat: defaultLat,
+            defaultLng: defaultLng,
           }),
         });
 

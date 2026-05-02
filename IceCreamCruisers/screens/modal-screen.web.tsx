@@ -21,6 +21,8 @@ interface Event {
   meetingPoint: string;
   description: string;
   waypoints: Waypoint[];
+  defaultLat?: number | null;
+  defaultLng?: number | null;
 }
 
 function toCoordinateValue(value: number | string): number | null {
@@ -90,6 +92,8 @@ function buildMapDocument(event: Event | null): string | null {
 
   const routeData = JSON.stringify({
     name: event.name,
+    defaultLat: event.defaultLat ?? null,
+    defaultLng: event.defaultLng ?? null,
     waypoints: event.waypoints.map((waypoint) => ({
       name: waypoint.name,
       lat: waypoint.lat,
@@ -159,7 +163,7 @@ function buildMapDocument(event: Event | null): string | null {
       const coordinates = routeData.waypoints.map((waypoint) => [waypoint.lat, waypoint.lng]);
 
       if (coordinates.length === 0) {
-        map.setView([43.169, -85.212], 9);
+        map.setView([routeData.defaultLat || 43.169, routeData.defaultLng || -85.212], 9);
       } else if (coordinates.length === 1) {
         map.setView(coordinates[0], 13);
       } else {
