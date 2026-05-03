@@ -92,8 +92,8 @@ const mockEvents = [
     time: '6:00 PM',
     event_time: '6:00 PM',
     cruise_start_time: '6:30 PM',
-    default_lat: 43.18209,
-    default_lng: -85.25334,
+    default_lat: null,
+    default_lng: null,
     meeting_point: 'Central Park Entrance',
     description: 'A scenic evening cruise through downtown streets.',
     waypoints: [
@@ -110,8 +110,8 @@ const mockEvents = [
     time: '7:00 PM',
     event_time: '7:00 PM',
     cruise_start_time: '7:30 PM',
-    default_lat: 43.18209,
-    default_lng: -85.25334,
+    default_lat: null,
+    default_lng: null,
     meeting_point: 'Beach Parking Lot',
     description: 'Enjoy the sunset while cruising along the beach.',
     waypoints: [
@@ -483,7 +483,7 @@ function buildMapDocument(event) {
       const coordinates = (routeData.waypoints || []).map((waypoint) => [waypoint.lat, waypoint.lng]);
 
       if (coordinates.length === 0) {
-        map.setView([routeData.defaultLat || 43.18209, routeData.defaultLng || -85.25334], 9);
+        map.setView([routeData.defaultLat || 0, routeData.defaultLng || 0], 2);
       } else if (coordinates.length === 1) {
         map.setView(coordinates[0], 13);
       } else {
