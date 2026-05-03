@@ -160,8 +160,7 @@ app.get('/api/events', async (req, res) => {
     }
 
     if (!events || events.length === 0) {
-      // Return mock data if database is unavailable
-      return res.json(formatMockEvents(mockEvents));
+      return res.json([]);
     }
 
     const eventsWithWaypoints = await Promise.all(
@@ -198,29 +197,6 @@ app.get('/api/events/:id', async (req, res) => {
   try {
     const eventId = req.params.id;
 
-    // Check mock data first
-    const mockEvent = mockEvents.find(e => e.id === parseInt(eventId));
-    if (mockEvent) {
-      return res.json({
-        id: mockEvent.id,
-        name: mockEvent.name,
-        date: mockEvent.date,
-        time: mockEvent.time,
-        eventTime: mockEvent.event_time,
-        cruiseStartTime: mockEvent.cruise_start_time,
-        description: mockEvent.description,
-        meetingPoint: mockEvent.meeting_point,
-        waypoints: mockEvent.waypoints.map(wp => ({
-          id: wp.id,
-          name: wp.name,
-          lat: wp.latitude,
-          lng: wp.longitude,
-          order: wp.order_index,
-          notes: wp.notes
-        })),
-      });
-    }
-
     let event;
     let waypoints;
     try {
@@ -237,7 +213,28 @@ app.get('/api/events/:id', async (req, res) => {
     } catch (dbError) {
       // Fall back to mock data if database is unavailable
       console.log('Database unavailable for event', eventId);
-      return res.status(404).json({ error: 'Event not found' });
+      const mockEvent = mockEvents.find(e => e.id === parseInt(eventId));
+      if (!mockEvent) return res.status(404).json({ error: 'Event not found' });
+      return res.json({
+        id: mockEvent.id,
+        name: mockEvent.name,
+        date: mockEvent.date,
+        time: mockEvent.time,
+        eventTime: mockEvent.event_time,
+        cruiseStartTime: mockEvent.cruise_start_time,
+        defaultLat: mockEvent.default_lat ?? null,
+        defaultLng: mockEvent.default_lng ?? null,
+        description: mockEvent.description,
+        meetingPoint: mockEvent.meeting_point,
+        waypoints: mockEvent.waypoints.map(wp => ({
+          id: wp.id,
+          name: wp.name,
+          lat: wp.latitude,
+          lng: wp.longitude,
+          order: wp.order_index,
+          notes: wp.notes
+        })),
+      });
     }
 
     res.json({
