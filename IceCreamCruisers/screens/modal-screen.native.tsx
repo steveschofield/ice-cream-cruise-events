@@ -267,8 +267,8 @@ export default function ModalScreen() {
         ref={mapRef}
         style={styles.map}
         initialRegion={{
-          latitude: event.waypoints[0]?.lat ?? event.defaultLat ?? 43.169,
-          longitude: event.waypoints[0]?.lng ?? event.defaultLng ?? -85.212,
+          latitude: event.waypoints[0]?.lat ?? event.defaultLat ?? 43.18209,
+          longitude: event.waypoints[0]?.lng ?? event.defaultLng ?? -85.25334,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}

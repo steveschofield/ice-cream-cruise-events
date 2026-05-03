@@ -163,7 +163,7 @@ function buildMapDocument(event: Event | null): string | null {
       const coordinates = routeData.waypoints.map((waypoint) => [waypoint.lat, waypoint.lng]);
 
       if (coordinates.length === 0) {
-        map.setView([routeData.defaultLat || 43.169, routeData.defaultLng || -85.212], 9);
+        map.setView([routeData.defaultLat || 43.18209, routeData.defaultLng || -85.25334], 9);
       } else if (coordinates.length === 1) {
         map.setView(coordinates[0], 13);
       } else {
