@@ -43,11 +43,18 @@ async function initializeDatabase() {
     await pool.query(`
       ALTER TABLE events ADD COLUMN IF NOT EXISTS default_lng DOUBLE PRECISION
     `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_waypoints_event_id ON waypoints(event_id)
+    `);
   } catch (error) {
     console.error('Error initializing database:', error);
   }
 }
 
 initializeDatabase();
+
+process.on('SIGTERM', () => pool.end());
+process.on('SIGINT', () => pool.end());
 
 module.exports = pool;

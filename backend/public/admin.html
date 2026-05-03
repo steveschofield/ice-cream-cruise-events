@@ -471,6 +471,10 @@
     let waypointMarkers = [];
     let routePolyline = null;
 
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     // Initialize map
     function initMap() {
       map = L.map('map').setView([43.18209, -85.25334], 13);
@@ -707,11 +711,11 @@
           .reverse()
           .map((event) => `
         <div class="event-card">
-          <h3>${event.name}</h3>
-          <p>${event.date} • ${event.time}</p>
-          <p>${event.meetingPoint}</p>
-          <p class="waypoint-count">${event.waypoints.length} waypoints</p>
-          <button class="btn-danger delete-btn btn-small" onclick="deleteEvent(${event.id})">Delete</button>
+          <h3>${escapeHtml(event.name)}</h3>
+          <p>${escapeHtml(event.date)} • ${escapeHtml(event.time)}</p>
+          <p>${escapeHtml(event.meetingPoint)}</p>
+          <p class="waypoint-count">${escapeHtml(event.waypoints.length)} waypoints</p>
+          <button class="btn-danger delete-btn btn-small" onclick="deleteEvent(${parseInt(event.id)})">Delete</button>
         </div>
       `)
           .join('');

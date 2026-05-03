@@ -9,11 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.steveschofield.icecreamcruisers",
+      "bundleIdentifier": "com.level52tech.icecreamcruisers.dev",
       "buildNumber": "4",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Your location is used to track your position during a cruise and alert you when approaching waypoints.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your location is used to track your position during a cruise and alert you when approaching waypoints."
       }
     },
     "android": {

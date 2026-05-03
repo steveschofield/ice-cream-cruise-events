@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const rateLimit = require('express-rate-limit');
 const pool = require('./db');
 const path = require('path');
 
@@ -21,10 +22,24 @@ const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 const webDir = path.join(__dirname, 'public/web');
 
-app.use(cors());
-app.use(bodyParser.json());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://192.168.1.69:3000',
+  'https://ice-cream-cruise-events.onrender.com',
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  }
+}));
+app.use(bodyParser.json({ limit: '10kb' }));
 app.use(express.static(publicDir, { index: false }));
 app.use(express.static(webDir, { index: false }));
+
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+app.use('/api/', apiLimiter);
 
 // Helper functions for database operations
 async function dbAll(query, params) {
@@ -163,30 +178,48 @@ app.get('/api/events', async (req, res) => {
       return res.json([]);
     }
 
-    const eventsWithWaypoints = await Promise.all(
-      events.map(async (event) => {
-        const waypoints = await dbAll(
-          'SELECT id, name, latitude::double precision as lat, longitude::double precision as lng, order_index as "order", notes FROM waypoints WHERE event_id = $1 ORDER BY order_index',
-          [event.id]
-        );
+    const rows = await dbAll(`
+      SELECT e.id, e.name, e.date, e.time, e.event_time, e.cruise_start_time,
+             e.meeting_point, e.description, e.default_lat, e.default_lng,
+             w.id as wp_id, w.name as wp_name,
+             w.latitude::double precision as wp_lat,
+             w.longitude::double precision as wp_lng,
+             w.order_index as wp_order, w.notes as wp_notes
+      FROM events e
+      LEFT JOIN waypoints w ON w.event_id = e.id
+      ORDER BY e.date DESC, w.order_index
+    `, []);
 
-        return {
-          id: event.id,
-          name: event.name,
-          date: event.date,
-          time: formatTime(event.time),
-          eventTime: formatTime(event.event_time),
-          cruiseStartTime: formatTime(event.cruise_start_time),
-          defaultLat: event.default_lat ?? null,
-          defaultLng: event.default_lng ?? null,
-          description: event.description,
-          meetingPoint: event.meeting_point,
-          waypoints: waypoints || [],
-        };
-      })
-    );
+    const eventMap = new Map();
+    for (const row of rows) {
+      if (!eventMap.has(row.id)) {
+        eventMap.set(row.id, {
+          id: row.id,
+          name: row.name,
+          date: row.date,
+          time: formatTime(row.time),
+          eventTime: formatTime(row.event_time),
+          cruiseStartTime: formatTime(row.cruise_start_time),
+          defaultLat: row.default_lat ?? null,
+          defaultLng: row.default_lng ?? null,
+          description: row.description,
+          meetingPoint: row.meeting_point,
+          waypoints: [],
+        });
+      }
+      if (row.wp_id) {
+        eventMap.get(row.id).waypoints.push({
+          id: row.wp_id,
+          name: row.wp_name,
+          lat: row.wp_lat,
+          lng: row.wp_lng,
+          order: row.wp_order,
+          notes: row.wp_notes,
+        });
+      }
+    }
 
-    res.json(eventsWithWaypoints);
+    res.json([...eventMap.values()]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -256,12 +289,24 @@ app.get('/api/events/:id', async (req, res) => {
 });
 
 // Create event with waypoints
-app.post('/api/events', basicAuth, async (req, res) => {
+app.post('/api/events', authLimiter, basicAuth, async (req, res) => {
   try {
     const { name, date, eventTime, cruiseStartTime, meetingPoint, description, waypoints, defaultLat, defaultLng } = req.body;
 
     if (!name || !date || !eventTime || !cruiseStartTime || !meetingPoint || !waypoints || waypoints.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (typeof name !== 'string' || name.length > 200) return res.status(400).json({ error: 'Invalid event name' });
+    if (typeof meetingPoint !== 'string' || meetingPoint.length > 300) return res.status(400).json({ error: 'Invalid meeting point' });
+    if (description && (typeof description !== 'string' || description.length > 1000)) return res.status(400).json({ error: 'Description too long' });
+    if (waypoints.length > 50) return res.status(400).json({ error: 'Too many waypoints (max 50)' });
+
+    for (const wp of waypoints) {
+      const lat = parseFloat(wp.lat);
+      const lng = parseFloat(wp.lng);
+      if (isNaN(lat) || lat < -90 || lat > 90) return res.status(400).json({ error: `Invalid latitude: ${wp.lat}` });
+      if (isNaN(lng) || lng < -180 || lng > 180) return res.status(400).json({ error: `Invalid longitude: ${wp.lng}` });
     }
 
     const result = await pool.query(
@@ -603,7 +648,6 @@ app.listen(PORT, () => {
   console.log(`\n✅ Server running on port ${PORT}`);
   console.log(`📍 API endpoints: http://localhost:${PORT}/api/events`);
   console.log(`🔐 Admin panel: http://localhost:${PORT}/admin`);
-  console.log(`   Username: ${process.env.ADMIN_USERNAME}`);
   console.log(`\n🗺️  Test modal: http://localhost:${PORT}/modal?eventId=1`);
   console.log(`\n`);
 });

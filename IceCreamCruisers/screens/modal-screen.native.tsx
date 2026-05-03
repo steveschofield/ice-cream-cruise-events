@@ -4,7 +4,6 @@ import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { Audio } from 'expo-av';
 import { API_URL } from '../config';
 
 interface Waypoint {
@@ -27,6 +26,15 @@ interface Event {
   waypoints: Waypoint[];
   defaultLat?: number | null;
   defaultLng?: number | null;
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function toCoordinateValue(value: number | string): number | null {
@@ -135,10 +143,12 @@ export default function ModalScreen() {
         setCurrentLocation({ ...newCoord, timestamp: location.timestamp });
 
         if (lastLocationRef.current) {
-          const deltaLat = newCoord.latitude - lastLocationRef.current.latitude;
-          const deltaLng = newCoord.longitude - lastLocationRef.current.longitude;
-          const distMeters = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng) * 111000;
-          const speedKmh = (distMeters / 1000) / (location.timestamp - lastLocationRef.current.timestamp) * 1000 * 3.6;
+          const distKm = haversineKm(
+            lastLocationRef.current.latitude, lastLocationRef.current.longitude,
+            newCoord.latitude, newCoord.longitude
+          );
+          const elapsedHours = (location.timestamp - lastLocationRef.current.timestamp) / 3600000;
+          const speedKmh = elapsedHours > 0 ? distKm / elapsedHours : 0;
           setCurrentSpeed(Math.max(0, Math.round(speedKmh)));
         }
         lastLocationRef.current = { ...newCoord, timestamp: location.timestamp };
@@ -149,12 +159,9 @@ export default function ModalScreen() {
           let closestDist = Infinity;
 
           event.waypoints.forEach((wp, idx) => {
-            const dist = Math.sqrt(
-              Math.pow(wp.lat - newCoord.latitude, 2) +
-              Math.pow(wp.lng - newCoord.longitude, 2)
-            );
+            const dist = haversineKm(newCoord.latitude, newCoord.longitude, wp.lat, wp.lng);
 
-            if (dist < 0.003) {
+            if (dist < 0.3) {
               completed.add(wp.id);
             }
 
@@ -168,24 +175,10 @@ export default function ModalScreen() {
           setNextWaypointIndex(nextIdx);
 
           const nextWp = event.waypoints[nextIdx];
-          const kmToNext = Number(
-            (
-              Math.sqrt(
-                Math.pow(nextWp.lat - newCoord.latitude, 2) +
-                Math.pow(nextWp.lng - newCoord.longitude, 2)
-              ) * 111
-            ).toFixed(1)
-          );
+          const kmToNext = Number(haversineKm(newCoord.latitude, newCoord.longitude, nextWp.lat, nextWp.lng).toFixed(1));
           setDistanceToNext(kmToNext);
 
           if (kmToNext < 1 && !alertedWaypoints.has(nextWp.id)) {
-            try {
-              await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-              const { sound } = await Audio.Sound.createAsync(require('../assets/notification.mp3').default || { uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' });
-              await sound.playAsync();
-            } catch (e) {
-              console.log('Audio play failed, trying vibration only');
-            }
             Vibration.vibrate([0, 500, 100, 500]);
             setAlertedWaypoints(new Set([...alertedWaypoints, nextWp.id]));
           }
