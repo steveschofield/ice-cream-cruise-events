@@ -99,6 +99,17 @@ if [ ! -f "eas.json" ]; then
 else
   echo -e "${GREEN}✓ EAS configuration found${NC}"
 
+  production_gradle_command=$(node -e "const fs = require('fs'); const config = JSON.parse(fs.readFileSync('eas.json', 'utf8')); process.stdout.write(config.build?.production?.android?.gradleCommand || '')")
+
+  if echo "$production_gradle_command" | grep -q '^assembleRelease'; then
+    echo -e "${RED}✗ Android production build is configured to generate an APK${NC}"
+    echo "   Google Play releases for new apps should use an Android App Bundle (AAB)"
+    echo "   Update the production Android gradleCommand to bundleRelease or remove the override"
+    failed=1
+  else
+    echo -e "${GREEN}✓ Android production build is configured for an AAB${NC}"
+  fi
+
   # Check if credentials are set
   if [ -z "$ADMIN_USERNAME" ] || [ -z "$ADMIN_PASSWORD" ]; then
     echo -e "${YELLOW}⚠ Backend credentials not set in environment${NC}"

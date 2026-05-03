@@ -83,7 +83,7 @@ if [ "$platform_choice" == "2" ] || [ "$platform_choice" == "3" ]; then
   echo ""
   START_TIME=$(date +%s)
   echo "Android Build started: $(date)"
-  eas build --platform android --local --output ./builds/android.apk
+  eas build --platform android --profile preview --local --output ./builds/android.apk
   ANDROID_RESULT=$?
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))
