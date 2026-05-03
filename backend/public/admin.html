@@ -267,12 +267,107 @@
     }
 
     @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+
+      header {
+        padding: 14px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+      }
+
+      header h1 {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
       .layout {
         grid-template-columns: 1fr;
       }
 
+      /* Show map panel before sidebar on mobile */
+      .sidebar {
+        order: 2;
+      }
+
+      .layout > div:last-child {
+        order: 1;
+      }
+
       #map {
-        height: 400px;
+        height: 55vh;
+        border-radius: 6px;
+        margin-bottom: 12px;
+      }
+
+      .panel {
+        padding: 14px;
+        border-radius: 6px;
+      }
+
+      .panel h2 {
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+
+      label {
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      input, textarea {
+        padding: 12px;
+        font-size: 16px; /* prevents iOS zoom on focus */
+        border-radius: 8px;
+      }
+
+      button {
+        padding: 14px;
+        font-size: 15px;
+        border-radius: 8px;
+      }
+
+      .btn-small {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .waypoint-list {
+        max-height: 150px;
+      }
+
+      .waypoint-item {
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .waypoint-remove {
+        font-size: 18px;
+        padding: 4px 8px;
+      }
+
+      .events-list {
+        max-height: 200px;
+      }
+
+      .event-card {
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      .event-card .delete-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+
+      .map-instructions {
+        font-size: 13px;
+        padding: 10px;
       }
     }
   </style>
