@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const bodyParser = require('body-parser');
 const rateLimit = require('express-rate-limit');
 const pool = require('./db');
@@ -27,11 +28,25 @@ const allowedOrigins = [
   'http://192.168.1.69:3000',
   'https://ice-cream-cruise-events.onrender.com',
 ];
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org", "https://unpkg.com"],
+      connectSrc: ["'self'", "https://ice-cream-cruise-events.onrender.com"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
-  }
+  },
+  credentials: false,
 }));
 app.use(bodyParser.json({ limit: '10kb' }));
 app.use(express.static(publicDir, { index: false }));
@@ -347,7 +362,8 @@ app.post('/api/events', authLimiter, basicAuth, async (req, res) => {
 app.delete('/api/events/:id', basicAuth, async (req, res) => {
   try {
     const eventId = req.params.id;
-    await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
+    const result = await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Event not found' });
     res.json({ message: 'Event deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
