@@ -401,6 +401,12 @@
       addWaypointMarker(waypoint);
       updateRoutePolyline();
       updateWaypointList();
+
+      // Auto-fill default location from the first waypoint
+      if (waypoints.length === 1) {
+        document.getElementById('defaultLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('defaultLng').value = e.latlng.lng.toFixed(6);
+      }
     }
 
     function addWaypointMarker(waypoint) {
