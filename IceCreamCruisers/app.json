@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.level52tech.icecreamcruisers.dev",
+      "bundleIdentifier": "com.steveschofield.icecreamcruisers",
       "buildNumber": "4",
       "supportsTablet": true,
       "infoPlist": {
