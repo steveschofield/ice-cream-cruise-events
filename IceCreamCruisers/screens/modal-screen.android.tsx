@@ -1,6 +1,6 @@
 import { useLocalSearchParams, Link } from 'expo-router';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Vibration } from 'react-native';
-import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
+import { Linking, StyleSheet, View, Text, TouchableOpacity, Vibration } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -28,6 +28,12 @@ interface Event {
   defaultLng?: number | null;
 }
 
+interface LocationData {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -43,10 +49,7 @@ function toCoordinateValue(value: number | string): number | null {
 }
 
 function normalizeEvent(rawEvent: any): Event | null {
-  if (!rawEvent) {
-    return null;
-  }
-
+  if (!rawEvent) return null;
   const waypoints = Array.isArray(rawEvent.waypoints)
     ? rawEvent.waypoints
         .map((waypoint: any) => ({
@@ -56,28 +59,110 @@ function normalizeEvent(rawEvent: any): Event | null {
         }))
         .filter((waypoint: any) => waypoint.lat !== null && waypoint.lng !== null)
     : [];
-
-  return {
-    ...rawEvent,
-    waypoints,
-  };
+  return { ...rawEvent, waypoints };
 }
 
-interface LocationData {
-  latitude: number;
-  longitude: number;
-  timestamp: number;
+function buildMapsUrl(event: Event | null): string | null {
+  if (!event || event.waypoints.length === 0) return null;
+
+  if (event.waypoints.length === 1) {
+    const wp = event.waypoints[0];
+    return `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
+  }
+
+  const [origin, ...rest] = event.waypoints;
+  const destination = rest[rest.length - 1];
+  const middleWaypoints = rest.slice(0, -1);
+
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving`;
+  if (middleWaypoints.length > 0) {
+    url += `&waypoints=${middleWaypoints.map(wp => `${wp.lat},${wp.lng}`).join('|')}`;
+  }
+  return url;
+}
+
+function buildMapDocument(event: Event | null): string | null {
+  if (!event) return null;
+
+  const routeData = JSON.stringify({
+    name: event.name,
+    defaultLat: event.defaultLat ?? null,
+    defaultLng: event.defaultLng ?? null,
+    waypoints: event.waypoints.map((waypoint) => ({
+      name: waypoint.name,
+      lat: waypoint.lat,
+      lng: waypoint.lng,
+      order: waypoint.order,
+    })),
+  }).replace(/</g, '\\u003c');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+      html, body, #map { height: 100%; margin: 0; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      .leaflet-container { background: #eef3f8; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+      const routeData = ${routeData};
+      const colors = { start: '#16a34a', middle: '#2563eb', end: '#dc2626' };
+      const map = L.map('map', { zoomControl: true, attributionControl: true });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const escapeHtml = (value) =>
+        String(value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+      const coordinates = routeData.waypoints.map((wp) => [wp.lat, wp.lng]);
+
+      if (coordinates.length === 0) {
+        map.setView([routeData.defaultLat || 0, routeData.defaultLng || 0], coordinates.length === 0 ? 2 : 9);
+      } else if (coordinates.length === 1) {
+        map.setView(coordinates[0], 13);
+      } else {
+        map.fitBounds(L.latLngBounds(coordinates).pad(0.2));
+      }
+
+      if (coordinates.length > 1) {
+        L.polyline(coordinates, { color: '#2563eb', weight: 4, opacity: 0.85 }).addTo(map);
+      }
+
+      routeData.waypoints.forEach((waypoint, index) => {
+        const isStart = index === 0;
+        const isEnd = index === routeData.waypoints.length - 1;
+        const color = isStart ? colors.start : isEnd ? colors.end : colors.middle;
+        const markerIcon = L.divIcon({
+          html: '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:' + color + ';border-radius:50%;font-weight:bold;color:white;font-size:14px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);">' + waypoint.order + '</div>',
+          iconSize: [32, 32], className: 'custom-marker'
+        });
+        L.marker([waypoint.lat, waypoint.lng], { icon: markerIcon })
+          .addTo(map)
+          .bindPopup('<strong>' + escapeHtml(waypoint.order + '. ' + waypoint.name) + '</strong>');
+      });
+    </script>
+  </body>
+</html>`;
 }
 
 export default function ModalScreen() {
   const { eventId } = useLocalSearchParams();
-  const mapRef = useRef<MapView>(null);
-
+  const [event, setEvent] = useState<Event | null>(null);
   const [cruiseStarted, setCruiseStarted] = useState(false);
   const [cruisePaused, setCruisePaused] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
   const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
-  const [event, setEvent] = useState<Event | null>(null);
   const [completedWaypoints, setCompletedWaypoints] = useState(new Set<number>());
   const [nextWaypointIndex, setNextWaypointIndex] = useState(0);
   const [distanceToNext, setDistanceToNext] = useState<number | null>(null);
@@ -88,10 +173,8 @@ export default function ModalScreen() {
   useEffect(() => {
     const loadEvent = async () => {
       try {
-        console.log('Loading event:', eventId);
         const response = await fetch(`${API_URL}/events/${eventId}`);
         const data = await response.json();
-        console.log('Event loaded:', data);
         setEvent(normalizeEvent(data));
       } catch (error) {
         console.error('Error loading event:', error);
@@ -107,17 +190,6 @@ export default function ModalScreen() {
       }
     };
   }, [locationSubscription]);
-
-  useEffect(() => {
-    if (event && event.waypoints.length > 1 && mapRef.current) {
-      const coords = event.waypoints.map(wp => ({ latitude: wp.lat, longitude: wp.lng }));
-      mapRef.current.fitToCoordinates(coords, {
-        edgePadding: { top: 60, right: 60, bottom: 60, left: 60 },
-        animated: false,
-      });
-    }
-  }, [event]);
-
 
   const startCruise = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -135,7 +207,7 @@ export default function ModalScreen() {
         timeInterval: 1000,
         distanceInterval: 10,
       },
-      async (location) => {
+      (location) => {
         const newCoord = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -160,11 +232,9 @@ export default function ModalScreen() {
 
           event.waypoints.forEach((wp, idx) => {
             const dist = haversineKm(newCoord.latitude, newCoord.longitude, wp.lat, wp.lng);
-
             if (dist < 0.3) {
               completed.add(wp.id);
             }
-
             if (dist < closestDist) {
               closestDist = dist;
               nextIdx = idx;
@@ -183,27 +253,14 @@ export default function ModalScreen() {
             setAlertedWaypoints(new Set([...alertedWaypoints, nextWp.id]));
           }
         }
-
-        if (!cruisePaused) {
-          mapRef.current?.animateToRegion({
-            ...newCoord,
-            latitudeDelta: 0.04,
-            longitudeDelta: 0.04,
-          });
-        }
       }
     );
 
     setLocationSubscription(subscription);
   };
 
-  const pauseCruise = () => {
-    setCruisePaused(true);
-  };
-
-  const resumeCruise = () => {
-    setCruisePaused(false);
-  };
+  const pauseCruise = () => setCruisePaused(true);
+  const resumeCruise = () => setCruisePaused(false);
 
   const stopCruise = async () => {
     if (locationSubscription) {
@@ -233,10 +290,8 @@ export default function ModalScreen() {
     );
   }
 
-  const routeCoordinates = event.waypoints.map((wp) => ({
-    latitude: wp.lat,
-    longitude: wp.lng,
-  }));
+  const mapsUrl = buildMapsUrl(event);
+  const mapDocument = buildMapDocument(event);
 
   return (
     <View style={styles.container}>
@@ -256,70 +311,16 @@ export default function ModalScreen() {
         {cruiseStarted && <Text style={styles.statusText}>{cruisePaused ? '⏸️ Paused' : '🔴 Live'}</Text>}
       </View>
 
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={{
-          latitude: event.waypoints[0]?.lat ?? event.defaultLat ?? 0,
-          longitude: event.waypoints[0]?.lng ?? event.defaultLng ?? 0,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-      >
-        {event.waypoints.map((waypoint, idx) => {
-          const isStart = waypoint.order === 1;
-          const isEnd = waypoint.order === event.waypoints.length;
-          const isCompleted = completedWaypoints.has(waypoint.id);
-          const isNext = idx === nextWaypointIndex && !isCompleted;
-
-          let color = '#FF3B30';  // Default: red for start/end
-          if (isCompleted) {
-            color = '#CCCCCC';  // Gray for completed
-          } else if (isStart || isEnd) {
-            color = '#FF3B30';  // Always red for start and end
-          } else if (isNext) {
-            color = '#FF6600';  // Bright orange for next (middle waypoints only)
-          } else {
-            color = '#007AFF';  // Blue for other middle waypoints
-          }
-
-          return (
-            <Marker
-              key={waypoint.id}
-              coordinate={{
-                latitude: waypoint.lat,
-                longitude: waypoint.lng,
-              }}
-              pinColor={color}
-              opacity={isCompleted ? 0.4 : 1}
-            >
-              <View style={[styles.numberOverlay, isNext && styles.numberOverlayLarge, { borderColor: color }]}>
-                <Text style={[styles.overlayNumber, isNext && styles.overlayNumberLarge]}>{waypoint.order}</Text>
-              </View>
-              <Callout>
-                <View style={styles.calloutContainer}>
-                  <View style={[styles.numberBadge, { backgroundColor: color }]}>
-                    <Text style={styles.numberText}>{waypoint.order}</Text>
-                  </View>
-                  <View style={styles.calloutTextContainer}>
-                    <Text style={styles.calloutTitle}>{waypoint.name}</Text>
-                    {waypoint.notes && <Text style={styles.calloutNotes}>{waypoint.notes}</Text>}
-                  </View>
-                </View>
-              </Callout>
-            </Marker>
-          );
-        })}
-        <Polyline coordinates={routeCoordinates} strokeColor="#007AFF" strokeWidth={3} />
-
-        {currentLocation && (
-          <Marker
-            coordinate={currentLocation}
-            title="You"
-            pinColor="#5AC8FA"
+      <View style={styles.mapCard}>
+        {mapDocument && (
+          <WebView
+            source={{ html: mapDocument }}
+            style={{ flex: 1 }}
+            originWhitelist={['*']}
+            javaScriptEnabled
           />
         )}
-      </MapView>
+      </View>
 
       <View style={styles.footer}>
         <View style={styles.buttonRow}>
@@ -343,6 +344,11 @@ export default function ModalScreen() {
               </TouchableOpacity>
             </>
           )}
+          {mapsUrl && (
+            <TouchableOpacity style={[styles.button, styles.mapsButton]} onPress={() => Linking.openURL(mapsUrl)}>
+              <Text style={styles.buttonText}>Google Maps</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <Link href="/" dismissTo asChild>
           <TouchableOpacity style={styles.closeButton}>
@@ -355,190 +361,28 @@ export default function ModalScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, backgroundColor: '#fff', flexDirection: 'column' },
   titleBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f5f5f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: '#f5f5f5', borderBottomWidth: 1, borderBottomColor: '#e0e0e0',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
   },
-  titleContent: {
-    flex: 1,
-  },
-  nextWaypointText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#007AFF',
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: 6,
-    gap: 12,
-  },
-  statText: {
-    fontSize: 12,
-    color: '#555',
-    fontWeight: '500',
-  },
-  detailsContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    maxHeight: 140,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  distanceText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  numberOverlay: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  overlayNumber: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    color: '#333',
-  },
-  numberOverlayLarge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  overlayNumberLarge: {
-    fontSize: 18,
-  },
-  dateTime: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  timeInfo: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
-  },
-  meetingPoint: {
-    fontSize: 14,
-    color: '#007AFF',
-    marginBottom: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#FF3B30',
-    fontWeight: '600',
-  },
-  map: {
-    flex: 1,
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  button: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  pauseButton: {
-    backgroundColor: '#FF9500',
-  },
-  resumeButton: {
-    backgroundColor: '#34C759',
-  },
-  stopButton: {
-    backgroundColor: '#FF3B30',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
-  },
-  calloutContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
-    maxWidth: 280,
-  },
-  numberBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-    flexShrink: 0,
-  },
-  numberText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  calloutTextContainer: {
-    flex: 1,
-  },
-  calloutTitle: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  calloutNotes: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-  },
+  titleContent: { flex: 1 },
+  modalTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
+  nextWaypointText: { fontSize: 16, fontWeight: '700', color: '#007AFF', marginTop: 4 },
+  statsRow: { flexDirection: 'row', marginTop: 6, gap: 12 },
+  statText: { fontSize: 12, color: '#555', fontWeight: '500' },
+  statusText: { fontSize: 14, color: '#FF3B30', fontWeight: '600' },
+  mapCard: { flex: 1, overflow: 'hidden', backgroundColor: '#eef3f8' },
+  footer: { padding: 12, borderTopWidth: 1, borderTopColor: '#e0e0e0' },
+  buttonRow: { flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' },
+  button: { flex: 1, backgroundColor: '#007AFF', padding: 12, borderRadius: 6, alignItems: 'center' },
+  pauseButton: { backgroundColor: '#FF9500' },
+  resumeButton: { backgroundColor: '#34C759' },
+  stopButton: { backgroundColor: '#FF3B30' },
+  mapsButton: { backgroundColor: '#5856D6' },
+  buttonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  closeButton: { paddingVertical: 10, alignItems: 'center' },
+  closeButtonText: { color: '#007AFF', fontSize: 16, fontWeight: '600' },
+  errorText: { fontSize: 16, color: '#666', marginBottom: 16 },
 });

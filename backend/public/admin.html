@@ -267,12 +267,107 @@
     }
 
     @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+
+      header {
+        padding: 14px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+      }
+
+      header h1 {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
       .layout {
         grid-template-columns: 1fr;
       }
 
+      /* Show map panel before sidebar on mobile */
+      .sidebar {
+        order: 2;
+      }
+
+      .layout > div:last-child {
+        order: 1;
+      }
+
       #map {
-        height: 400px;
+        height: 55vh;
+        border-radius: 6px;
+        margin-bottom: 12px;
+      }
+
+      .panel {
+        padding: 14px;
+        border-radius: 6px;
+      }
+
+      .panel h2 {
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+
+      label {
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      input, textarea {
+        padding: 12px;
+        font-size: 16px; /* prevents iOS zoom on focus */
+        border-radius: 8px;
+      }
+
+      button {
+        padding: 14px;
+        font-size: 15px;
+        border-radius: 8px;
+      }
+
+      .btn-small {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .waypoint-list {
+        max-height: 150px;
+      }
+
+      .waypoint-item {
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .waypoint-remove {
+        font-size: 18px;
+        padding: 4px 8px;
+      }
+
+      .events-list {
+        max-height: 200px;
+      }
+
+      .event-card {
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      .event-card .delete-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+
+      .map-instructions {
+        font-size: 13px;
+        padding: 10px;
       }
     }
   </style>
@@ -321,6 +416,15 @@
               <textarea id="description" placeholder="Optional description">Enjoy Ice Cream and sharing your cool ride with the Greenville community.</textarea>
             </div>
 
+            <div class="form-group">
+              <label>Default Map Location</label>
+              <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                <input type="number" id="defaultLat" placeholder="Latitude" step="any" style="flex: 1;">
+                <input type="number" id="defaultLng" placeholder="Longitude" step="any" style="flex: 1;">
+              </div>
+              <button type="button" id="useMapCenterBtn" class="btn-primary" style="font-size: 12px; padding: 7px;">Use Current Map Center</button>
+            </div>
+
             <button type="button" id="saveEventBtn" class="btn-success">Save Event</button>
           </form>
         </div>
@@ -367,9 +471,13 @@
     let waypointMarkers = [];
     let routePolyline = null;
 
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     // Initialize map
     function initMap() {
-      map = L.map('map').setView([43.17, -85.21], 13);
+      map = L.map('map').setView([43.18209, -85.25334], 13);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
@@ -392,6 +500,12 @@
       addWaypointMarker(waypoint);
       updateRoutePolyline();
       updateWaypointList();
+
+      // Auto-fill default location from the first waypoint
+      if (waypoints.length === 1) {
+        document.getElementById('defaultLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('defaultLng').value = e.latlng.lng.toFixed(6);
+      }
     }
 
     function addWaypointMarker(waypoint) {
@@ -490,7 +604,13 @@
     });
 
     document.getElementById('resetMapBtn').addEventListener('click', () => {
-      map.setView([43.17, -85.21], 13);
+      map.setView([43.18209, -85.25334], 13);
+    });
+
+    document.getElementById('useMapCenterBtn').addEventListener('click', () => {
+      const center = map.getCenter();
+      document.getElementById('defaultLat').value = center.lat.toFixed(6);
+      document.getElementById('defaultLng').value = center.lng.toFixed(6);
     });
 
     document.getElementById('saveEventBtn').addEventListener('click', async () => {
@@ -504,6 +624,10 @@
       const cruiseStartTime = document.getElementById('cruiseStartTime').value;
       const meetingPoint = document.getElementById('meetingPoint').value;
       const description = document.getElementById('description').value;
+      const defaultLatVal = document.getElementById('defaultLat').value;
+      const defaultLngVal = document.getElementById('defaultLng').value;
+      const defaultLat = defaultLatVal !== '' ? parseFloat(defaultLatVal) : null;
+      const defaultLng = defaultLngVal !== '' ? parseFloat(defaultLngVal) : null;
 
       if (!eventName || !eventDate || !eventTime || !cruiseStartTime || !meetingPoint) {
         alert('Please fill in all required fields');
@@ -533,6 +657,8 @@
             meetingPoint: meetingPoint,
             description: description,
             waypoints: waypoints,
+            defaultLat: defaultLat,
+            defaultLng: defaultLng,
           }),
         });
 
@@ -585,11 +711,11 @@
           .reverse()
           .map((event) => `
         <div class="event-card">
-          <h3>${event.name}</h3>
-          <p>${event.date} • ${event.time}</p>
-          <p>${event.meetingPoint}</p>
-          <p class="waypoint-count">${event.waypoints.length} waypoints</p>
-          <button class="btn-danger delete-btn btn-small" onclick="deleteEvent(${event.id})">Delete</button>
+          <h3>${escapeHtml(event.name)}</h3>
+          <p>${escapeHtml(event.date)} • ${escapeHtml(event.time)}</p>
+          <p>${escapeHtml(event.meetingPoint)}</p>
+          <p class="waypoint-count">${escapeHtml(event.waypoints.length)} waypoints</p>
+          <button class="btn-danger delete-btn btn-small" onclick="deleteEvent(${parseInt(event.id)})">Delete</button>
         </div>
       `)
           .join('');
