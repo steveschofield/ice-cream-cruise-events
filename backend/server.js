@@ -422,155 +422,294 @@ function buildMapDocument(event) {
 
   const mapsUrl = buildMapsUrl(waypointsArray);
   const routeDataJson = JSON.stringify(routeDataObj).replace(/</g, '\\u003c');
+  const mapsUrlSafe = mapsUrl ? escapeHtml(mapsUrl) : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#f5f5f5" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
-      html, body, #map {
-        height: 100%;
-        margin: 0;
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      #app { display: flex; flex-direction: column; height: 100dvh; }
+      #header {
+        padding: 10px 14px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-shrink: 0;
       }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      #header-left { flex: 1; }
+      #event-name { font-size: 13px; font-weight: 600; margin: 0; }
+      #next-waypoint { font-size: 15px; font-weight: 700; color: #007AFF; margin: 3px 0 0; display: none; }
+      #stats-row { display: none; flex-direction: row; gap: 14px; margin-top: 5px; }
+      #stats-row span { font-size: 12px; color: #555; font-weight: 500; }
+      #status-badge {
+        font-size: 13px; font-weight: 600; color: #FF3B30;
+        display: none; white-space: nowrap; padding-top: 2px;
       }
-      .leaflet-container {
-        background: #eef3f8;
-      }
-      .info-panel {
-        padding: 16px;
+      #map { flex: 1; }
+      #footer {
+        padding: 10px 12px;
+        border-top: 1px solid #e0e0e0;
         background: white;
-        font-size: 14px;
-        line-height: 1.5;
         display: flex;
         flex-direction: column;
-        gap: 12px;
-      }
-      .info-panel h2 {
-        margin: 0;
-        font-size: 18px;
-      }
-      .info-panel p {
-        margin: 4px 0 0 0;
-        color: #666;
-      }
-      .button-group {
-        display: flex;
         gap: 8px;
+        flex-shrink: 0;
       }
-      .map-button {
-        flex: 1;
-        padding: 10px 16px;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-        text-align: center;
+      #btn-row { display: flex; gap: 8px; }
+      .btn {
+        flex: 1; padding: 12px 8px; border: none; border-radius: 6px;
+        font-size: 15px; font-weight: 600; cursor: pointer; color: white;
       }
-      .map-button-google {
-        background-color: #007AFF;
-        color: white;
+      .btn-start { background: #007AFF; }
+      .btn-pause { background: #FF9500; }
+      .btn-resume { background: #34C759; }
+      .btn-stop { background: #FF3B30; }
+      .btn-maps { background: #5856D6; }
+      #close-link {
+        display: block; text-align: center; padding: 8px;
+        color: #007AFF; font-size: 15px; font-weight: 600; text-decoration: none;
       }
-      .map-button:hover {
-        opacity: 0.9;
+      #alert-banner {
+        display: none; position: fixed; top: 0; left: 0; right: 0;
+        background: #FF9500; color: white; text-align: center;
+        padding: 12px; font-weight: 700; font-size: 15px; z-index: 9999;
       }
+      .leaflet-container { background: #eef3f8; }
     </style>
   </head>
   <body>
-    <div style="display: flex; flex-direction: column; height: 100vh;">
-      <div id="map" style="flex: 1;"></div>
-      <div class="info-panel">
-        <div>
-          <h2>${escapeHtml(routeDataObj.name)}</h2>
-          <p><strong>Waypoints:</strong> ${escapeHtml(String(routeDataObj.waypoints.length))}</p>
+    <div id="alert-banner"></div>
+    <div id="app">
+      <div id="header">
+        <div id="header-left">
+          <p id="event-name">${escapeHtml(routeDataObj.name)}</p>
+          <p id="next-waypoint"></p>
+          <div id="stats-row">
+            <span id="speed-stat">⚡ 0 km/h</span>
+            <span id="dist-stat">📍 — km</span>
+          </div>
         </div>
-        ${mapsUrl ? `<div class="button-group">
-          <a href="${escapeHtml(mapsUrl)}" class="map-button map-button-google">Google Maps</a>
-        </div>` : ''}
+        <div id="status-badge">🔴 Live</div>
+      </div>
+      <div id="map"></div>
+      <div id="footer">
+        <div id="btn-row">
+          <button class="btn btn-start" id="btn-start">Start Cruise</button>
+          ${mapsUrlSafe ? `<a href="${mapsUrlSafe}" class="btn btn-maps" style="text-align:center;text-decoration:none;line-height:1.4;">Google Maps</a>` : ''}
+        </div>
+        <a href="/" id="close-link">Close</a>
       </div>
     </div>
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
       const routeData = ${routeDataJson};
 
-      if (!routeData || !routeData.waypoints) {
-        document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Error: No route data available</div>';
-        throw new Error('routeData or waypoints is undefined');
+      const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+      function haversineKm(lat1, lng1, lat2, lng2) {
+        const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       }
 
-      const colors = {
-        start: '#16a34a',
-        middle: '#2563eb',
-        end: '#dc2626',
-      };
-
-      const map = L.map('map', {
-        zoomControl: true,
-        attributionControl: true,
-      });
-
+      // --- Map setup ---
+      const map = L.map('map', { zoomControl: true, attributionControl: true });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
+        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
-      const escapeHtml = (value) =>
-        String(value).replace(/[&<>"']/g, (character) => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        }[character]));
-
-      const coordinates = (routeData.waypoints || []).map((waypoint) => [waypoint.lat, waypoint.lng]);
-
-      if (coordinates.length === 0) {
+      const coords = routeData.waypoints.map(wp => [wp.lat, wp.lng]);
+      if (coords.length === 0) {
         map.setView([routeData.defaultLat || 0, routeData.defaultLng || 0], 2);
-      } else if (coordinates.length === 1) {
-        map.setView(coordinates[0], 13);
+      } else if (coords.length === 1) {
+        map.setView(coords[0], 13);
       } else {
-        map.fitBounds(L.latLngBounds(coordinates).pad(0.2));
+        map.fitBounds(L.latLngBounds(coords).pad(0.2));
       }
 
-      if (coordinates.length > 1) {
-        L.polyline(coordinates, {
-          color: '#2563eb',
-          weight: 4,
-          opacity: 0.85,
-        }).addTo(map);
+      if (coords.length > 1) {
+        L.polyline(coords, { color: '#2563eb', weight: 4, opacity: 0.85 }).addTo(map);
       }
 
-      routeData.waypoints.forEach((waypoint, index) => {
-        const isStart = index === 0;
-        const isEnd = index === routeData.waypoints.length - 1;
+      const waypointMarkers = [];
+      const colors = { start: '#16a34a', middle: '#2563eb', end: '#dc2626' };
+
+      routeData.waypoints.forEach((wp, i) => {
+        const isStart = i === 0, isEnd = i === routeData.waypoints.length - 1;
         const color = isStart ? colors.start : isEnd ? colors.end : colors.middle;
+        const icon = L.divIcon({
+          html: '<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:' + color + ';border-radius:50%;border:2px solid white;color:white;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">' + wp.order + '</div>',
+          iconSize: [32, 32], className: ''
+        });
+        const marker = L.marker([wp.lat, wp.lng], { icon })
+          .addTo(map)
+          .bindPopup('<strong>' + escHtml(wp.order + '. ' + wp.name) + '</strong>');
+        waypointMarkers.push(marker);
+      });
 
-        const markerIcon = L.divIcon({
-          html: '<div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: ' + color + '; border-radius: 50%; border: 2px solid white; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">' + waypoint.order + '</div>',
-          iconSize: [32, 32],
-          className: 'custom-marker'
+      // --- Cruise state ---
+      let cruising = false, paused = false, watchId = null, wakeLock = null;
+      let lastPos = null, alertedIds = new Set(), completedIds = new Set();
+      let posMarker = null, posAccCircle = null;
+
+      const btnStart  = document.getElementById('btn-start');
+      const btnRow    = document.getElementById('btn-row');
+      const nextWpEl  = document.getElementById('next-waypoint');
+      const statsRow  = document.getElementById('stats-row');
+      const speedEl   = document.getElementById('speed-stat');
+      const distEl    = document.getElementById('dist-stat');
+      const statusEl  = document.getElementById('status-badge');
+      const alertEl   = document.getElementById('alert-banner');
+
+      function showAlert(msg) {
+        alertEl.textContent = msg;
+        alertEl.style.display = 'block';
+        setTimeout(() => { alertEl.style.display = 'none'; }, 4000);
+        if (navigator.vibrate) navigator.vibrate([0, 400, 100, 400]);
+      }
+
+      function updateMarkerStyle(index, isNext) {
+        const wp = routeData.waypoints[index];
+        if (!wp) return;
+        const isStart = index === 0, isEnd = index === routeData.waypoints.length - 1;
+        const isCompleted = completedIds.has(wp.order);
+        let color = isStart ? colors.start : isEnd ? colors.end : colors.middle;
+        if (isCompleted) color = '#aaa';
+        else if (isNext && !isStart && !isEnd) color = '#FF6600';
+        const size = isNext ? 44 : 32;
+        const icon = L.divIcon({
+          html: '<div style="display:flex;align-items:center;justify-content:center;width:' + size + 'px;height:' + size + 'px;background:' + color + ';border-radius:50%;border:2px solid white;color:white;font-weight:bold;font-size:' + (isNext?18:14) + 'px;box-shadow:0 2px 4px rgba(0,0,0,0.3);opacity:' + (isCompleted?0.4:1) + ';">' + wp.order + '</div>',
+          iconSize: [size, size], className: ''
+        });
+        waypointMarkers[index].setIcon(icon);
+      }
+
+      function onPosition(pos) {
+        if (paused) return;
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        const ts = pos.timestamp;
+
+        // Update live marker
+        if (!posMarker) {
+          posMarker = L.circleMarker([lat, lng], {
+            radius: 10, color: '#007AFF', fillColor: '#5AC8FA',
+            fillOpacity: 0.9, weight: 3
+          }).addTo(map).bindPopup('You are here');
+          posAccCircle = L.circle([lat, lng], { radius: accuracy, color: '#007AFF', fillOpacity: 0.08, weight: 1 }).addTo(map);
+        } else {
+          posMarker.setLatLng([lat, lng]);
+          posAccCircle.setLatLng([lat, lng]).setRadius(accuracy);
+        }
+        map.panTo([lat, lng]);
+
+        // Speed
+        if (lastPos) {
+          const distKm = haversineKm(lastPos.lat, lastPos.lng, lat, lng);
+          const elapsedHrs = (ts - lastPos.ts) / 3600000;
+          const kmh = elapsedHrs > 0 ? Math.max(0, Math.round(distKm / elapsedHrs)) : 0;
+          speedEl.textContent = '⚡ ' + kmh + ' km/h';
+        }
+        lastPos = { lat, lng, ts };
+
+        // Nearest waypoint
+        let nextIdx = 0, closestDist = Infinity;
+        routeData.waypoints.forEach((wp, i) => {
+          const d = haversineKm(lat, lng, wp.lat, wp.lng);
+          if (d < 0.3) completedIds.add(wp.order);
+          if (d < closestDist) { closestDist = d; nextIdx = i; }
         });
 
-        L.marker([waypoint.lat, waypoint.lng], { icon: markerIcon })
-          .addTo(map)
-          .bindPopup('<strong>' + escapeHtml(waypoint.order + '. ' + waypoint.name) + '</strong>');
-      });
+        const nextWp = routeData.waypoints[nextIdx];
+        const kmToNext = haversineKm(lat, lng, nextWp.lat, nextWp.lng).toFixed(1);
+        nextWpEl.textContent = nextWp.name;
+        distEl.textContent = '📍 ' + kmToNext + ' km';
+
+        routeData.waypoints.forEach((_, i) => updateMarkerStyle(i, i === nextIdx));
+
+        if (parseFloat(kmToNext) < 1 && !alertedIds.has(nextWp.order)) {
+          alertedIds.add(nextWp.order);
+          showAlert('📍 Approaching: ' + nextWp.name);
+        }
+      }
+
+      async function startCruise() {
+        if (!navigator.geolocation) {
+          alert('Geolocation is not supported by your browser.');
+          return;
+        }
+        try {
+          if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+        } catch(e) {}
+
+        cruising = true; paused = false;
+        nextWpEl.style.display = 'block';
+        statsRow.style.display = 'flex';
+        statusEl.style.display = 'block';
+        statusEl.textContent = '🔴 Live';
+
+        btnRow.innerHTML = \`
+          <button class="btn btn-pause" onclick="pauseCruise()">Pause</button>
+          <button class="btn btn-stop" onclick="stopCruise()">Stop</button>
+          ${mapsUrlSafe ? `<a href="${mapsUrlSafe}" class="btn btn-maps" style="text-align:center;text-decoration:none;line-height:1.4;">Maps</a>` : ''}
+        \`;
+
+        watchId = navigator.geolocation.watchPosition(onPosition,
+          (err) => alert('Location error: ' + err.message),
+          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+      }
+
+      function pauseCruise() {
+        paused = true;
+        statusEl.textContent = '⏸️ Paused';
+        btnRow.innerHTML = \`
+          <button class="btn btn-resume" onclick="resumeCruise()">Resume</button>
+          <button class="btn btn-stop" onclick="stopCruise()">Stop</button>
+          ${mapsUrlSafe ? `<a href="${mapsUrlSafe}" class="btn btn-maps" style="text-align:center;text-decoration:none;line-height:1.4;">Maps</a>` : ''}
+        \`;
+      }
+
+      function resumeCruise() {
+        paused = false;
+        statusEl.textContent = '🔴 Live';
+        btnRow.innerHTML = \`
+          <button class="btn btn-pause" onclick="pauseCruise()">Pause</button>
+          <button class="btn btn-stop" onclick="stopCruise()">Stop</button>
+          ${mapsUrlSafe ? `<a href="${mapsUrlSafe}" class="btn btn-maps" style="text-align:center;text-decoration:none;line-height:1.4;">Maps</a>` : ''}
+        \`;
+      }
+
+      function stopCruise() {
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        if (posMarker) { posMarker.remove(); posMarker = null; }
+        if (posAccCircle) { posAccCircle.remove(); posAccCircle = null; }
+        cruising = false; paused = false; lastPos = null;
+        alertedIds.clear(); completedIds.clear();
+        nextWpEl.style.display = 'none';
+        statsRow.style.display = 'none';
+        statusEl.style.display = 'none';
+        routeData.waypoints.forEach((_, i) => updateMarkerStyle(i, false));
+        if (coords.length > 1) map.fitBounds(L.latLngBounds(coords).pad(0.2));
+        btnRow.innerHTML = \`
+          <button class="btn btn-start" onclick="startCruise()">Start Cruise</button>
+          ${mapsUrlSafe ? `<a href="${mapsUrlSafe}" class="btn btn-maps" style="text-align:center;text-decoration:none;line-height:1.4;">Google Maps</a>` : ''}
+        \`;
+      }
+
+      btnStart.addEventListener('click', startCruise);
     </script>
   </body>
 </html>`;
