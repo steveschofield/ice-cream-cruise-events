@@ -484,11 +484,41 @@ function buildMapDocument(event) {
         background: #FF9500; color: white; text-align: center;
         padding: 12px; font-weight: 700; font-size: 15px; z-index: 9999;
       }
+      #location-error {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        z-index: 10000; align-items: center; justify-content: center; padding: 24px;
+      }
+      #location-error-box {
+        background: white; border-radius: 12px; padding: 24px; max-width: 360px; width: 100%;
+      }
+      #location-error-box h3 { margin: 0 0 12px; font-size: 17px; color: #FF3B30; }
+      #location-error-box p { margin: 0 0 10px; font-size: 14px; color: #333; line-height: 1.5; }
+      #location-error-box ol { margin: 0 0 16px; padding-left: 20px; font-size: 14px; color: #333; line-height: 1.8; }
+      #location-error-close {
+        width: 100%; padding: 12px; background: #007AFF; color: white;
+        border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+      }
       .leaflet-container { background: #eef3f8; }
     </style>
   </head>
   <body>
     <div id="alert-banner"></div>
+    <div id="location-error">
+      <div id="location-error-box">
+        <h3>📍 Location Access Required</h3>
+        <p>Safari blocked location access. To enable it:</p>
+        <ol>
+          <li>Open the iPhone <strong>Settings</strong> app</li>
+          <li>Scroll down and tap <strong>Privacy &amp; Security</strong></li>
+          <li>Tap <strong>Location Services</strong></li>
+          <li>Scroll down and tap <strong>Safari Websites</strong></li>
+          <li>Select <strong>While Using the App</strong></li>
+          <li>Return here and tap <strong>Start Cruise</strong> again</li>
+        </ol>
+        <p style="color:#888;font-size:13px;">Alternatively: tap <strong>AA</strong> in the Safari address bar → Website Settings → Location → Allow.</p>
+        <button id="location-error-close" onclick="document.getElementById('location-error').style.display='none'">Got it</button>
+      </div>
+    </div>
     <div id="app">
       <div id="header">
         <div id="header-left">
@@ -666,7 +696,14 @@ function buildMapDocument(event) {
         \`;
 
         watchId = navigator.geolocation.watchPosition(onPosition,
-          (err) => alert('Location error: ' + err.message),
+          (err) => {
+            stopCruise();
+            if (err.code === 1) {
+              document.getElementById('location-error').style.display = 'flex';
+            } else {
+              showAlert('Location error: ' + err.message);
+            }
+          },
           { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
         );
       }
